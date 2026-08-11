@@ -1,0 +1,142 @@
+@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&display=swap");
+@import "tailwindcss";
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: #000;
+  color: #fff;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* =========================
+   STREAM LOADER
+========================= */
+
+
+.stream-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background:
+    radial-gradient(
+      circle at center,
+      rgba(139, 92, 246, 0.18) 0%,
+      rgba(76, 29, 149, 0.08) 30%,
+      transparent 60%
+    ),
+    #050505;
+
+  overflow: hidden;
+}
+
+.stream-loader-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* Much tighter */
+  gap: 0;
+
+  font-family: "Cormorant Garamond", serif;
+  font-size: clamp(3rem, 5vw, 4.5rem);
+  font-weight: 700;
+
+  /* Almost normal word spacing */
+  letter-spacing: -0.02em;
+
+  color: #8b5cf6;
+}
+
+.stream-loader-logo span {
+  display: inline-block;
+
+  opacity: 0;
+  transform:
+    translateY(35px)
+    scale(0.75);
+
+  filter: blur(10px);
+
+  animation: streamLetterReveal 0.75s
+    cubic-bezier(0.16, 1, 0.3, 1)
+    forwards;
+}
+
+@keyframes streamLetterReveal {
+  0% {
+    opacity: 0;
+    transform:
+      translateY(35px)
+      scale(0.75);
+    filter: blur(10px);
+  }
+
+  60% {
+    opacity: 1;
+    transform:
+      translateY(-4px)
+      scale(1.06);
+    filter: blur(0);
+  }
+
+  100% {
+    opacity: 1;
+    transform:
+      translateY(0)
+      scale(1);
+    filter: blur(0);
+    text-shadow:
+      0 0 12px rgba(139, 92, 246, 0.55),
+      0 0 35px rgba(139, 92, 246, 0.25);
+  }
+}
+
+/* =========================
+   PAGE TRANSITION
+========================= */
+
+.page-transition {
+  animation: pageEnter 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes pageEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.985);
+    filter: blur(4px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes streamLoading {
+  0% {
+    width: 0%;
+    transform: translateX(0);
+  }
+
+  50% {
+    width: 70%;
+  }
+
+  100% {
+    width: 100%;
+  }
+}
+
+.stream-loading-line {
+  animation: streamLoading 1.4s ease-in-out forwards;
+}
