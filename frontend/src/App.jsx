@@ -8,7 +8,10 @@ import FAQ from "./components/FAQ";
 import Footer from "./components/Footer";
 
 import Login from "./pages/Login";
-import Register from "./pages/Register";
+import RegisterIntro from "./pages/RegisterIntro";
+import VerifyEmail from "./pages/VerifyEmail";
+import Plans from "./pages/Plans";
+import Payment from "./pages/Payment";
 
 function Home() {
   return (
@@ -33,8 +36,28 @@ export default function App() {
     <div key={location.pathname} className="page-transition">
       <Routes location={location}>
         <Route path="/" element={<Home />} />
+
         <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+
+        <Route
+          path="/register-intro"
+          element={<RegisterIntro />}
+        />
+
+        <Route
+          path="/verify-email"
+          element={<VerifyEmail />}
+        />
+
+        <Route
+          path="/plans"
+          element={<Plans />}
+        />
+
+        <Route
+          path="/payment"
+          element={<Payment />}
+        />
       </Routes>
     </div>
   );
