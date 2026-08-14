@@ -12,7 +12,10 @@ import RegisterIntro from "./pages/RegisterIntro";
 import VerifyEmail from "./pages/VerifyEmail";
 import Plans from "./pages/Plans";
 import Payment from "./pages/Payment";
-
+import WhosWatching from "./pages/WhosWatching";
+import  Browse from "./pages/Browse";
+import MovieDetails from "./pages/MovieDetails";
+import Player from "./pages/Player";
 function Home() {
   return (
     <>
@@ -37,7 +40,10 @@ export default function App() {
       <Routes location={location}>
         <Route path="/" element={<Home />} />
 
-        <Route path="/login" element={<Login />} />
+        <Route
+          path="/login"
+          element={<Login />}
+        />
 
         <Route
           path="/register-intro"
@@ -57,6 +63,26 @@ export default function App() {
         <Route
           path="/payment"
           element={<Payment />}
+        />
+
+        <Route
+          path="/whos-watching"
+          element={<WhosWatching />}
+        />
+
+        <Route
+          path="/browse"
+          element={<Browse />}
+        />
+
+        <Route
+          path="/title/:id"
+          element={<MovieDetails />}
+        />
+
+        <Route
+          path="/watch/movie/:id"
+          element={<Player />}
         />
       </Routes>
     </div>

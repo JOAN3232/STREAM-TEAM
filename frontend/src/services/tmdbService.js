@@ -22,6 +22,34 @@ export const getTrendingMovies = async () => {
   return data.results;
 };
 
+export const getMovieDetails = async (movieId) => {
+  const response = await fetch(
+    `${BASE_URL}/movie/${movieId}?language=en-US&append_to_response=credits,videos`,
+    options
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch movie details");
+  }
+
+  return response.json();
+};
+
+export const getMovieRecommendations = async (movieId) => {
+  const response = await fetch(
+    `${BASE_URL}/movie/${movieId}/recommendations?language=en-US&page=1`,
+    options
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch recommendations");
+  }
+
+  const data = await response.json();
+
+  return data.results;
+};
+
 export const getPosterUrl = (posterPath) => {
   if (!posterPath) return null;
 
