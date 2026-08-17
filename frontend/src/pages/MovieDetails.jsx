@@ -3,14 +3,14 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import {
   getBackdropUrl,
-  getMovieDetails,
-  getMovieRecommendations,
+  getMediaDetails,
+  getMediaRecommendations,
   getPosterUrl,
 } from "../services/tmdbService";
 
 export default function MovieDetails() {
   const navigate = useNavigate();
-  const { id } = useParams();
+  const { id, mediaType = "movie" } = useParams();
 
   const [movie, setMovie] = useState(null);
   const [recommendations, setRecommendations] = useState([]);
@@ -22,8 +22,8 @@ export default function MovieDetails() {
         setLoading(true);
 
         const [details, recommended] = await Promise.all([
-          getMovieDetails(id),
-          getMovieRecommendations(id),
+          getMediaDetails(mediaType, id),
+          getMediaRecommendations(mediaType, id),
         ]);
 
         setMovie(details);
@@ -41,7 +41,7 @@ export default function MovieDetails() {
     };
 
     loadMovie();
-  }, [id]);
+  }, [id, mediaType]);
 
   if (loading) {
     return (
@@ -61,7 +61,8 @@ export default function MovieDetails() {
     );
   }
 
-  const year = movie.release_date?.slice(0, 4) || "New";
+  const displayTitle = movie.title || movie.name;
+  const year = (movie.release_date || movie.first_air_date)?.slice(0, 4) || "New";
 
   const runtime = movie.runtime
     ? `${Math.floor(movie.runtime / 60)}h ${movie.runtime % 60}m`
@@ -110,7 +111,7 @@ export default function MovieDetails() {
                 fontFamily: '"Cormorant Garamond", serif',
               }}
             >
-              {movie.title}
+              {displayTitle}
             </h1>
 
             <div className="mt-5 flex flex-wrap items-center gap-3 text-xs text-white/55">
@@ -141,7 +142,7 @@ export default function MovieDetails() {
               <button
                 type="button"
                 onClick={() =>
-                  navigate(`/watch/movie/${movie.id}`)
+                  navigate(`/watch/${mediaType}/${movie.id}`)
                 }
                 className="flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-black transition hover:bg-white/85"
               >
@@ -165,7 +166,7 @@ export default function MovieDetails() {
           <div>
             <img
               src={getPosterUrl(movie.poster_path)}
-              alt={movie.title}
+              alt={displayTitle}
               className="w-full max-w-[320px] rounded-[22px] border border-white/[0.08] object-cover shadow-[0_25px_70px_rgba(0,0,0,0.4)]"
             />
           </div>
@@ -181,7 +182,7 @@ export default function MovieDetails() {
                 fontFamily: '"Cormorant Garamond", serif',
               }}
             >
-              {movie.title}
+              {displayTitle}
             </h2>
 
             {movie.tagline && (
@@ -248,24 +249,24 @@ export default function MovieDetails() {
                 key={item.id}
                 type="button"
                 onClick={() =>
-                  navigate(`/title/${item.id}`)
+                    navigate(`/title/${mediaType}/${item.id}`)
                 }
                 className="group text-left"
               >
                 <div className="aspect-[2/3] overflow-hidden rounded-[16px] border border-white/[0.07] transition duration-300 group-hover:-translate-y-2 group-hover:border-violet-400/35">
                   <img
                     src={getPosterUrl(item.poster_path)}
-                    alt={item.title}
+                    alt={item.title || item.name}
                     className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                   />
                 </div>
 
                 <p className="mt-3 truncate text-sm text-white/75">
-                  {item.title}
+                  {item.title || item.name}
                 </p>
 
                 <p className="mt-1 text-[10px] text-white/35">
-                  {item.release_date?.slice(0, 4) || "New"}
+                  {(item.release_date || item.first_air_date)?.slice(0, 4) || "New"}
                 </p>
               </button>
             ))}

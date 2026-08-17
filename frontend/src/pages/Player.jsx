@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { getMovieDetails } from "../services/tmdbService";
+import { getMediaDetails } from "../services/tmdbService";
 
 export default function Player() {
   const navigate = useNavigate();
-  const { id } = useParams();
+  const { id, mediaType = "movie" } = useParams();
 
   const [movie, setMovie] = useState(null);
   const [trailerKey, setTrailerKey] = useState(null);
@@ -18,7 +18,7 @@ export default function Player() {
         setLoading(true);
         setError("");
 
-        const details = await getMovieDetails(id);
+        const details = await getMediaDetails(mediaType, id);
 
         setMovie(details);
 
@@ -68,7 +68,7 @@ export default function Player() {
     };
 
     loadMovie();
-  }, [id]);
+  }, [id, mediaType]);
 
   if (loading) {
     return (
@@ -93,7 +93,7 @@ export default function Player() {
       {trailerKey ? (
         <iframe
           src={`https://www.youtube-nocookie.com/embed/${trailerKey}?autoplay=1&rel=0&modestbranding=1`}
-          title={`${movie?.title || "STREAM"} trailer`}
+          title={`${movie?.title || movie?.name || "STREAM"} trailer`}
           allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
           allowFullScreen
           referrerPolicy="strict-origin-when-cross-origin"
@@ -167,7 +167,7 @@ export default function Player() {
               '"Cormorant Garamond", serif',
           }}
         >
-          {movie?.title || "STREAM"}
+          {movie?.title || movie?.name || "STREAM"}
         </h1>
 
         <div className="mt-1 flex items-center gap-2 text-[10px] text-white/35">
