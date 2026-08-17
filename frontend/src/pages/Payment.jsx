@@ -1,341 +1,229 @@
-import { useEffect, useState } from "react";
-import {
-  Link,
-  useNavigate,
-  useSearchParams,
-} from "react-router-dom";
-
-const planDetails = {
-  basic: {
-    name: "Basic",
-    price: "₦2,500",
-    quality: "720p",
-    devices: "1 device",
-  },
-
-  standard: {
-    name: "Standard",
-    price: "₦4,500",
-    quality: "1080p Full HD",
-    devices: "2 devices",
-  },
-
-  premium: {
-    name: "Premium",
-    price: "₦7,000",
-    quality: "4K + HDR",
-    devices: "4 devices",
-  },
-};
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { selectPlan } from "../services/authService";
 
 export default function Payment() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
 
-  const email = searchParams.get("email") || "";
-  const planId = searchParams.get("plan") || "standard";
+  const [selectedPlan, setSelectedPlan] = useState("premium");
+  const [form, setForm] = useState({
+    cardName: "",
+    cardNumber: "",
+    expiry: "",
+    cvv: "",
+  });
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
-  const plan = planDetails[planId] || planDetails.standard;
+  const plans = [
+    { id: "basic", name: "Basic", price: "₦2,500", quality: "SD", screens: 1 },
+    { id: "standard", name: "Standard", price: "₦4,500", quality: "HD", screens: 2 },
+    { id: "premium", name: "Premium", price: "₦7,000", quality: "4K + HDR", screens: 4 },
+  ];
 
-  const [paymentMethod, setPaymentMethod] = useState("card");
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-    };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsProcessing(true);
 
-    handleScroll();
-
-    window.addEventListener("scroll", handleScroll, {
-      passive: true,
-    });
-
-    return () =>
-      window.removeEventListener("scroll", handleScroll);
-  }, []);
+    try {
+      await selectPlan(selectedPlan);
+      setIsProcessing(false);
+      setShowSuccess(true);
+    } catch (error) {
+      setIsProcessing(false);
+      console.error("Plan selection error:", error);
+      alert("Something went wrong saving your plan: " + error.message);
+    }
+  };
 
   const handleContinue = () => {
-    if (loading) return;
-
-    setLoading(true);
-
-    setTimeout(() => {
-      navigate("/whos-watching");
-    }, 900);
+    navigate("/whos-watching");
   };
 
   return (
-    <main className="relative min-h-screen overflow-x-hidden bg-[#07050d] text-white">
-      {/* BACKGROUND */}
-      <div className="pointer-events-none fixed inset-0">
-        <div className="absolute left-[30%] top-[30%] h-[500px] w-[500px] rounded-full bg-violet-700/[0.1] blur-[150px]" />
+    <div className="min-h-screen bg-black text-white px-6 py-12 page-transition">
+      <div className="max-w-4xl mx-auto">
+        <h1 className="font-['Cormorant_Garamond'] font-bold text-3xl md:text-4xl mb-2 text-[#8b5cf6]">
+          Choose Your Plan
+        </h1>
+        <p className="text-white/50 mb-10">
+          Cancel anytime. No commitments.
+        </p>
 
-        <div className="absolute bottom-0 right-0 h-[380px] w-[380px] rounded-full bg-fuchsia-700/[0.06] blur-[130px]" />
-
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#07050d]/40 to-[#050407]" />
-      </div>
-
-      {/* NAVBAR */}
-      <header
-        className={`
-          fixed
-          left-0
-          right-0
-          top-0
-          z-50
-          transition-all
-          duration-500
-          ${
-            isScrolled
-              ? "border-b border-white/[0.08] bg-[#09070d]/70 shadow-[0_15px_45px_rgba(0,0,0,0.22)] backdrop-blur-2xl"
-              : "border-b border-transparent bg-transparent"
-          }
-        `}
-      >
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5 sm:px-10 lg:px-14">
-          <Link
-            to="/"
-            className="text-2xl font-bold tracking-[0.15em] text-violet-400 sm:text-3xl"
-            style={{
-              fontFamily: '"Cormorant Garamond", serif',
-            }}
-          >
-            STREAM
-          </Link>
-
-          <Link
-            to="/login"
-            className="text-sm font-semibold text-white/70 transition hover:text-violet-300"
-          >
-            Sign In
-          </Link>
-        </div>
-      </header>
-
-      {/* BACK */}
-      <div className="relative z-20 mx-auto max-w-7xl px-6 pt-[105px] sm:px-10 lg:px-14">
-        <div className="flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="group flex items-center gap-2 text-sm text-white/50 transition hover:text-violet-300"
-          >
-            <span className="text-lg transition-transform duration-300 group-hover:-translate-x-1">
-              ←
-            </span>
-
-            <span>Back</span>
-          </button>
-
-          <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-violet-400 sm:text-xs">
-            Payment
-          </span>
-        </div>
-      </div>
-
-      {/* CONTENT */}
-      <section className="relative z-10 mx-auto max-w-6xl px-6 pb-20 pt-8 sm:px-10 lg:px-14">
-        <div className="text-center">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-violet-400">
-            Membership payment
-          </p>
-
-          <h1
-            className="mt-4 text-4xl font-semibold sm:text-5xl"
-            style={{
-              fontFamily: '"Cormorant Garamond", serif',
-            }}
-          >
-            Almost ready to stream.
-          </h1>
-
-          <p className="mx-auto mt-4 max-w-lg text-sm leading-6 text-white/50 sm:text-base">
-            Confirm your plan and choose how you&apos;d like to pay.
-          </p>
-        </div>
-
-        <div className="mx-auto mt-10 grid max-w-5xl gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-          {/* PAYMENT METHODS */}
-          <div className="rounded-[28px] border border-white/[0.09] bg-white/[0.025] p-6 backdrop-blur-xl sm:p-8">
-            <p className="text-[10px] uppercase tracking-[0.25em] text-white/35">
-              Payment method
-            </p>
-
-            <h2 className="mt-2 text-xl font-semibold">
-              Choose how to pay
-            </h2>
-
-            <div className="mt-7 space-y-4">
+        {/* Plan selector */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
+          {plans.map((plan) => {
+            const isSelected = selectedPlan === plan.id;
+            return (
               <button
+                key={plan.id}
                 type="button"
-                onClick={() => setPaymentMethod("card")}
-                className={`flex w-full items-center justify-between rounded-2xl border p-5 text-left transition ${
-                  paymentMethod === "card"
-                    ? "border-violet-400/70 bg-violet-500/[0.09]"
-                    : "border-white/[0.08] bg-black/10 hover:border-white/20"
+                onClick={() => setSelectedPlan(plan.id)}
+                className={`text-left rounded-lg p-5 border transition-all duration-300 ${
+                  isSelected
+                    ? "border-[#8b5cf6] bg-[#8b5cf6]/10 shadow-[0_0_20px_rgba(139,92,246,0.25)]"
+                    : "border-white/10 bg-white/[0.03] hover:border-white/30"
                 }`}
               >
-                <div>
-                  <p className="font-semibold">
-                    Debit or Credit Card
-                  </p>
-
-                  <p className="mt-1 text-xs text-white/40">
-                    Visa, Mastercard and Verve
-                  </p>
-                </div>
-
-                <div
-                  className={`flex h-5 w-5 items-center justify-center rounded-full border ${
-                    paymentMethod === "card"
-                      ? "border-violet-400"
-                      : "border-white/20"
-                  }`}
-                >
-                  {paymentMethod === "card" && (
-                    <div className="h-2.5 w-2.5 rounded-full bg-violet-400" />
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-['Cormorant_Garamond'] font-bold text-lg">
+                    {plan.name}
+                  </span>
+                  {isSelected && (
+                    <span className="text-[#8b5cf6] text-xs font-bold tracking-wide">
+                      SELECTED
+                    </span>
                   )}
                 </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setPaymentMethod("paystack")}
-                className={`flex w-full items-center justify-between rounded-2xl border p-5 text-left transition ${
-                  paymentMethod === "paystack"
-                    ? "border-violet-400/70 bg-violet-500/[0.09]"
-                    : "border-white/[0.08] bg-black/10 hover:border-white/20"
-                }`}
-              >
-                <div>
-                  <p className="font-semibold">
-                    Secure Checkout
-                  </p>
-
-                  <p className="mt-1 text-xs text-white/40">
-                    Pay securely through Paystack
-                  </p>
-                </div>
-
-                <div
-                  className={`flex h-5 w-5 items-center justify-center rounded-full border ${
-                    paymentMethod === "paystack"
-                      ? "border-violet-400"
-                      : "border-white/20"
-                  }`}
-                >
-                  {paymentMethod === "paystack" && (
-                    <div className="h-2.5 w-2.5 rounded-full bg-violet-400" />
-                  )}
-                </div>
-              </button>
-            </div>
-
-            <div className="mt-7 rounded-2xl border border-white/[0.07] bg-black/15 p-4">
-              <p className="text-xs leading-5 text-white/45">
-                No payment details are being collected during this UI demo.
-                Real secure checkout will be connected later.
-              </p>
-            </div>
-          </div>
-
-          {/* SUMMARY */}
-          <div className="rounded-[28px] border border-violet-400/20 bg-gradient-to-b from-violet-500/[0.08] to-white/[0.025] p-6 backdrop-blur-xl sm:p-8">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-violet-300">
-              Your membership
-            </p>
-
-            <div className="mt-6 flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-2xl font-bold">
-                  {plan.name}
-                </h2>
-
-                <p className="mt-1 text-sm text-white/40">
-                  Monthly membership
-                </p>
-              </div>
-
-              <div className="text-right">
-                <p className="text-2xl font-bold">
+                <p className="text-2xl font-bold mb-3">
                   {plan.price}
+                  <span className="text-sm text-white/40 font-normal">
+                    /mo
+                  </span>
                 </p>
+                <ul className="text-sm text-white/50 space-y-1">
+                  <li>{plan.quality}</li>
+                  <li>{plan.screens} screen{plan.screens > 1 ? "s" : ""}</li>
+                </ul>
+              </button>
+            );
+          })}
+        </div>
 
-                <p className="mt-1 text-xs text-white/35">
-                  / month
-                </p>
-              </div>
+        {/* Payment form wrapping input elements */}
+        <div className="bg-white/[0.03] border border-white/10 rounded-lg p-6 md:p-8">
+          <h2 className="font-['Cormorant_Garamond'] font-bold text-xl mb-6 text-[#8b5cf6]">
+            Payment Details
+          </h2>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm text-white/50 mb-1">
+                Name on Card
+              </label>
+              <input
+                type="text"
+                name="cardName"
+                value={form.cardName}
+                onChange={handleChange}
+                placeholder="Jane Doe"
+                className="w-full bg-black/40 border border-white/10 rounded-md px-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-[#8b5cf6] transition-colors"
+                required
+              />
             </div>
 
-            <div className="my-7 h-px bg-white/[0.09]" />
-
-            <div className="space-y-4 text-sm">
-              <div className="flex justify-between gap-4">
-                <span className="text-white/40">
-                  Video quality
-                </span>
-
-                <span className="font-medium text-white/80">
-                  {plan.quality}
-                </span>
-              </div>
-
-              <div className="flex justify-between gap-4">
-                <span className="text-white/40">
-                  Devices
-                </span>
-
-                <span className="font-medium text-white/80">
-                  {plan.devices}
-                </span>
-              </div>
-
-              <div className="flex justify-between gap-4">
-                <span className="text-white/40">
-                  Billing
-                </span>
-
-                <span className="font-medium text-white/80">
-                  Monthly
-                </span>
-              </div>
+            <div>
+              <label className="block text-sm text-white/50 mb-1">
+                Card Number
+              </label>
+              <input
+                type="text"
+                name="cardNumber"
+                value={form.cardNumber}
+                onChange={handleChange}
+                placeholder="1234 5678 9012 3456"
+                maxLength={15}
+                className="w-full bg-black/40 border border-white/10 rounded-md px-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-[#8b5cf6] transition-colors"
+                required
+              />
             </div>
 
-            <div className="my-7 h-px bg-white/[0.09]" />
-
-            <div className="flex items-center justify-between">
-              <span className="font-semibold">
-                Total today
-              </span>
-
-              <span className="text-xl font-bold text-violet-300">
-                {plan.price}
-              </span>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-white/50 mb-1">
+                  Expiry
+                </label>
+                <input
+                  type="text"
+                  name="expiry"
+                  value={form.expiry}
+                  onChange={handleChange}
+                  placeholder="MM/YY"
+                  maxLength={5}
+                  className="w-full bg-black/40 border border-white/10 rounded-md px-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-[#8b5cf6] transition-colors"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-white/50 mb-1">
+                  CVV
+                </label>
+                <input
+                  type="text"
+                  name="cvv"
+                  value={form.cvv}
+                  onChange={handleChange}
+                  placeholder="1234"
+                  maxLength={4}
+                  className="w-full bg-black/40 border border-white/10 rounded-md px-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-[#8b5cf6] transition-colors"
+                  required
+                />
+              </div>
             </div>
 
             <button
-              type="button"
-              onClick={handleContinue}
-              disabled={loading}
-              className="mt-7 flex h-14 w-full items-center justify-center rounded-xl bg-gradient-to-r from-violet-700 via-purple-600 to-fuchsia-600 font-semibold text-white transition duration-300 hover:scale-[1.01] disabled:cursor-wait disabled:opacity-70"
+              type="submit"
+              disabled={isProcessing}
+              className="w-full mt-4 bg-[#8b5cf6] hover:bg-[#7c3aed] disabled:opacity-50 text-white font-bold py-3 rounded-md transition-colors shadow-[0_0_20px_rgba(139,92,246,0.3)]"
             >
-              {loading ? (
-                <span className="flex items-center gap-3">
-                  <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                  Processing...
-                </span>
-              ) : (
-                <>
-                  Continue Securely
-                  <span className="ml-2">→</span>
-                </>
-              )}
+              {isProcessing
+                ? "Processing..."
+                : `Subscribe – ${plans.find((p) => p.id === selectedPlan)?.price}/mo`}
+            </button>
+
+            <p className="text-xs text-white/30 text-center pt-2">
+              This is a mock payment form for demo purposes only.
+            </p>
+          </form>
+        </div>
+      </div>
+
+      {/* Success Modal */}
+      {showSuccess && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="page-transition bg-[#0a0a0a] border border-[#8b5cf6]/40 rounded-xl p-8 max-w-sm w-full mx-4 text-center shadow-[0_0_40px_rgba(139,92,246,0.25)]">
+            <div className="w-16 h-16 mx-auto mb-5 rounded-full bg-[#8b5cf6]/15 flex items-center justify-center">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="w-8 h-8 text-[#8b5cf6]"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            </div>
+
+            <h3 className="font-['Cormorant_Garamond'] font-bold text-2xl text-[#8b5cf6] mb-2">
+              Payment Successful
+            </h3>
+            <p className="text-white/60 text-sm mb-6">
+              You're subscribed to the{" "}
+              <span className="text-white font-semibold">
+                {plans.find((p) => p.id === selectedPlan)?.name}
+              </span>{" "}
+              plan. Enjoy streaming.
+            </p>
+
+            <button
+              onClick={handleContinue}
+              className="w-full bg-[#8b5cf6] hover:bg-[#7c3aed] text-white font-bold py-3 rounded-md transition-colors"
+            >
+              Continue to Home
             </button>
           </div>
         </div>
-      </section>
-    </main>
+      )}
+    </div>
   );
 }

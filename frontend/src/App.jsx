@@ -11,6 +11,7 @@ import Login from "./pages/Login";
 import RegisterIntro from "./pages/RegisterIntro";
 import VerifyEmail from "./pages/VerifyEmail";
 import Plans from "./pages/Plans";
+import SetPassword from "./pages/SetPassword";
 import Payment from "./pages/Payment";
 import WhosWatching from "./pages/WhosWatching";
 import  Browse from "./pages/Browse";
@@ -58,6 +59,11 @@ export default function App() {
         <Route
           path="/plans"
           element={<Plans />}
+        />
+
+        <Route 
+        path="/set-password" 
+        element={<SetPassword />} 
         />
 
         <Route
