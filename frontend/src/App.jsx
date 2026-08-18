@@ -17,6 +17,7 @@ import WhosWatching from "./pages/WhosWatching";
 import  Browse from "./pages/Browse";
 import MovieDetails from "./pages/MovieDetails";
 import Player from "./pages/Player";
+import PaymentCallback from "./pages/PaymentCallback";
 function Home() {
   return (
     <>
@@ -100,6 +101,9 @@ export default function App() {
           path="/watch/:mediaType/:id"
           element={<Player />}
         />
+
+        <Route path="/payment/callback" 
+        element={<PaymentCallback/>} />
       </Routes>
     </div>
   );

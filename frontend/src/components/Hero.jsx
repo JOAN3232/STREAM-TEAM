@@ -4,7 +4,6 @@ import {
   getBackdropUrl,
   getTrendingMovies,
 } from "../services/tmdbService";
-// import { checkEmailExists } from "../services/authService";
 
 export default function Hero() {
   const navigate = useNavigate();
@@ -20,8 +19,6 @@ export default function Hero() {
       try {
         const movies = await getTrendingMovies();
 
-        console.log("TMDB trending movies:", movies);
-
         const movieBackgrounds = movies
           .filter((movie) => movie.backdrop_path)
           .slice(0, 7)
@@ -30,8 +27,6 @@ export default function Hero() {
             image: getBackdropUrl(movie.backdrop_path),
             title: movie.title || movie.name || "Movie",
           }));
-
-        console.log("Hero backgrounds:", movieBackgrounds);
 
         setBackgrounds(movieBackgrounds);
       } catch (error) {
@@ -58,7 +53,7 @@ export default function Hero() {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
   };
 
-  const handleGetStarted = async () => {
+  const handleGetStarted = () => {
     const cleanEmail = email.trim();
 
     if (!cleanEmail) {
@@ -77,27 +72,18 @@ export default function Hero() {
     setLoading(true);
 
     try {
-      const { exists } = await checkEmailExists(cleanEmail);
-
-      if (exists) {
-        // Direct returning users to login page
-        navigate(`/login?email=${encodeURIComponent(cleanEmail)}`);
-      } else {
-        // Direct new users into registration flow
-        navigate(`/register-intro?email=${encodeURIComponent(cleanEmail)}`);
-      }
-    } catch (err) {
-      console.error("Email verification error:", err);
-      // Fallback navigation in case of network issues
-      navigate(`/register-intro?email=${encodeURIComponent(cleanEmail)}`);
-    } finally {
+      navigate(
+        `/register-intro?email=${encodeURIComponent(cleanEmail)}`
+      );
+    } catch (error) {
+      console.error("Get started error:", error);
+      setEmailError("Something went wrong. Please try again.");
       setLoading(false);
     }
   };
 
   return (
     <section className="relative min-h-screen overflow-hidden bg-[#050505]">
-      {/* TMDB BACKGROUND SLIDESHOW */}
       {backgrounds.map((movie, index) => (
         <div
           key={movie.id}
@@ -115,21 +101,15 @@ export default function Hero() {
         </div>
       ))}
 
-      {/* FALLBACK ONLY WHILE TMDB LOADS */}
       {backgrounds.length === 0 && (
         <div className="absolute inset-0 bg-gradient-to-br from-[#160b27] via-[#09060f] to-[#050505]" />
       )}
 
-      {/* CINEMATIC OVERLAYS */}
       <div className="absolute inset-0 bg-black/35" />
-
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(124,58,237,0.18),transparent_62%)]" />
-
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-[#050505]/90" />
-
       <div className="absolute inset-0 bg-gradient-to-r from-black/30 via-transparent to-black/30" />
 
-      {/* CONTENT */}
       <div className="relative z-10 mx-auto flex min-h-screen max-w-5xl flex-col items-center justify-center px-6 pb-20 pt-28 text-center">
         <h1
           className="max-w-4xl text-4xl font-semibold leading-[1.02] text-white sm:text-5xl md:text-6xl lg:text-7xl"
@@ -150,7 +130,6 @@ export default function Hero() {
           Ready to watch? Enter your email to create or restart your membership.
         </p>
 
-        {/* EMAIL */}
         <div className="mt-7 w-full max-w-xl">
           <div className="flex flex-col gap-3 sm:flex-row">
             <input
@@ -204,7 +183,6 @@ export default function Hero() {
           )}
         </div>
 
-        {/* SLIDER INDICATORS */}
         {backgrounds.length > 0 && (
           <div className="mt-12 flex items-center justify-center gap-2">
             {backgrounds.map((movie, index) => (

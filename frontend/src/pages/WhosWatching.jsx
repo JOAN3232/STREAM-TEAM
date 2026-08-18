@@ -7,6 +7,12 @@ import {
 } from "../services/tmdbService";
 
 /* =========================================
+   API
+========================================= */
+
+const PROFILE_API = "http://localhost:8081/api/profiles";
+
+/* =========================================
    CHARACTER AVATARS
 ========================================= */
 
@@ -20,7 +26,6 @@ const CHARACTER_AVATARS = [
       "https://avatars.pfptown.com/137/spiderman-pfp-2314.png",
     ],
   },
-
   {
     id: "wednesday",
     name: "Wednesday",
@@ -29,7 +34,6 @@ const CHARACTER_AVATARS = [
       "https://www.hindustantimes.com/ht-img/img/2025/08/06/1200x1600/wednesday_1754481889556_1754481889786_1754501831171_1754503080142.jpg",
     ],
   },
-
   {
     id: "wonder-woman",
     name: "Wonder Woman",
@@ -38,7 +42,6 @@ const CHARACTER_AVATARS = [
       "https://e0.pxfuel.com/wallpapers/945/442/desktop-wallpaper-wonder-woman-gal-gadot-gal-gadot-wonder-woman-gal-cute-wonder-woman.jpg",
     ],
   },
-
   {
     id: "harley",
     name: "Harley Quinn",
@@ -47,7 +50,6 @@ const CHARACTER_AVATARS = [
       "https://conteudo.imguol.com.br/c/entretenimento/1c/2017/08/17/arlequina---margot-robbie-1502981761342_v2_1x1.jpg",
     ],
   },
-
   {
     id: "gwen",
     name: "Gwen Stacy",
@@ -56,7 +58,6 @@ const CHARACTER_AVATARS = [
       "https://m.media-amazon.com/images/M/MV5BMzE1MTc4OGMtOTU2OC00Zjg1LWJmMjUtNDQzNTQyMDlmOTRlXkEyXkFqcGc%40._V1_.jpg",
     ],
   },
-
   {
     id: "barbie",
     name: "Barbie",
@@ -65,7 +66,6 @@ const CHARACTER_AVATARS = [
       "https://i.pinimg.com/736x/a4/ed/44/a4ed44bcb3249df6bfecf43072cb0321.jpg",
     ],
   },
-
   {
     id: "batman",
     name: "Batman",
@@ -74,7 +74,6 @@ const CHARACTER_AVATARS = [
       "https://cdn.whitescreen.dev/batman-pfp-batman-avatar-with-stoic-expression-and-clean-composition-nocl-square_hd-b252_800.webp",
     ],
   },
-
   {
     id: "deadpool",
     name: "Deadpool",
@@ -86,7 +85,7 @@ const CHARACTER_AVATARS = [
 ];
 
 /* =========================================
-   CHARACTER IMAGE
+   CHARACTER AVATAR
 ========================================= */
 
 function CharacterAvatar({ avatar, className = "" }) {
@@ -135,7 +134,7 @@ function CharacterAvatar({ avatar, className = "" }) {
         </div>
       )}
 
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-white/[0.04]" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-white/[0.04]" />
     </div>
   );
 }
@@ -151,11 +150,14 @@ export default function WhosWatching() {
   const [currentBackground, setCurrentBackground] = useState(0);
 
   const [profiles, setProfiles] = useState([]);
+  const [profilesLoading, setProfilesLoading] = useState(true);
+
   const [showModal, setShowModal] = useState(false);
 
   const [name, setName] = useState("");
   const [kidsProfile, setKidsProfile] = useState(false);
   const [error, setError] = useState("");
+  const [savingProfile, setSavingProfile] = useState(false);
 
   const [selectedAvatar, setSelectedAvatar] = useState(
     CHARACTER_AVATARS[0]
@@ -164,7 +166,47 @@ export default function WhosWatching() {
   const [category, setCategory] = useState("All");
 
   /* =========================================
-     LOAD BACKGROUNDS
+     LOAD SAVED PROFILES FROM MONGODB
+  ========================================= */
+
+  useEffect(() => {
+    const loadProfiles = async () => {
+      try {
+        setProfilesLoading(true);
+
+        const response = await fetch(PROFILE_API);
+
+        if (!response.ok) {
+          throw new Error("Unable to load profiles");
+        }
+
+        const data = await response.json();
+
+        const formattedProfiles = data.map((profile) => {
+          const avatar =
+            CHARACTER_AVATARS.find(
+              (item) => item.id === profile.avatarId
+            ) || CHARACTER_AVATARS[0];
+
+          return {
+            ...profile,
+            avatar,
+          };
+        });
+
+        setProfiles(formattedProfiles);
+      } catch (error) {
+        console.error("Profile loading failed:", error);
+      } finally {
+        setProfilesLoading(false);
+      }
+    };
+
+    loadProfiles();
+  }, []);
+
+  /* =========================================
+     LOAD MOVIE BACKGROUNDS
   ========================================= */
 
   useEffect(() => {
@@ -193,7 +235,7 @@ export default function WhosWatching() {
   }, []);
 
   /* =========================================
-     SLIDESHOW
+     BACKGROUND SLIDESHOW
   ========================================= */
 
   useEffect(() => {
@@ -211,7 +253,7 @@ export default function WhosWatching() {
   }, [backgrounds.length]);
 
   /* =========================================
-     MODAL HELPERS
+     MODAL
   ========================================= */
 
   const openModal = () => {
@@ -219,8 +261,9 @@ export default function WhosWatching() {
   };
 
   const closeModal = () => {
-    setShowModal(false);
+    if (savingProfile) return;
 
+    setShowModal(false);
     setName("");
     setKidsProfile(false);
     setError("");
@@ -229,10 +272,10 @@ export default function WhosWatching() {
   };
 
   /* =========================================
-     SAVE PROFILE
+     SAVE PROFILE TO MONGODB
   ========================================= */
 
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
     const cleanName = name.trim();
 
     if (!cleanName) {
@@ -240,22 +283,75 @@ export default function WhosWatching() {
       return;
     }
 
-    const newProfile = {
-      id: Date.now(),
-      name: cleanName,
-      avatar: selectedAvatar,
-      kids: kidsProfile,
-    };
+    if (savingProfile) return;
 
-    setProfiles((current) => [
-      ...current,
-      newProfile,
-    ]);
+    try {
+      setSavingProfile(true);
+      setError("");
 
-    closeModal();
+      const response = await fetch(PROFILE_API, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: cleanName,
+          avatarId: selectedAvatar.id,
+          kids: kidsProfile,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Unable to save profile");
+      }
+
+      const savedProfile = await response.json();
+
+      const formattedProfile = {
+        ...savedProfile,
+        avatar:
+          CHARACTER_AVATARS.find(
+            (item) => item.id === savedProfile.avatarId
+          ) || selectedAvatar,
+      };
+
+      setProfiles((current) => [
+        ...current,
+        formattedProfile,
+      ]);
+
+      setShowModal(false);
+      setName("");
+      setKidsProfile(false);
+      setError("");
+      setCategory("All");
+      setSelectedAvatar(CHARACTER_AVATARS[0]);
+    } catch (error) {
+      console.error("Profile creation failed:", error);
+
+      setError(
+        "We couldn't save this profile. Please try again."
+      );
+    } finally {
+      setSavingProfile(false);
+    }
   };
 
+  /* =========================================
+     OPEN PROFILE
+  ========================================= */
+
   const handleProfileClick = (profile) => {
+    sessionStorage.setItem(
+      "stream_active_profile",
+      JSON.stringify({
+        id: profile.id,
+        name: profile.name,
+        avatarId: profile.avatar?.id || profile.avatarId,
+        kids: profile.kids,
+      })
+    );
+
     navigate(
       `/browse?profile=${encodeURIComponent(
         profile.name
@@ -267,35 +363,30 @@ export default function WhosWatching() {
      FILTER
   ========================================= */
 
-  const categories = [
-    "All",
-    "Girls",
-    "Heroes",
-  ];
+  const categories = ["All", "Girls", "Heroes"];
 
   const shownAvatars =
     category === "All"
       ? CHARACTER_AVATARS
       : CHARACTER_AVATARS.filter(
-          (avatar) =>
-            avatar.category === category
+          (avatar) => avatar.category === category
         );
 
   return (
     <main className="relative min-h-screen overflow-x-hidden bg-[#050407] text-white">
 
       {/* =====================================
-          MOVIE BACKGROUND
+          CINEMATIC MOVIE BACKGROUND
       ====================================== */}
 
       <div className="fixed inset-0 overflow-hidden">
         {backgrounds.map((movie, index) => (
           <div
             key={movie.id}
-            className={`absolute inset-0 transition-all duration-[1800ms] ease-out ${
+            className={`absolute inset-0 transition-all duration-[2200ms] ease-out ${
               index === currentBackground
                 ? "scale-100 opacity-100"
-                : "scale-[1.02] opacity-0"
+                : "scale-[1.04] opacity-0"
             }`}
           >
             <img
@@ -310,80 +401,74 @@ export default function WhosWatching() {
           <div className="absolute inset-0 bg-gradient-to-br from-[#171022] via-[#09070f] to-black" />
         )}
 
-        <div className="absolute inset-0 bg-black/42" />
+        <div className="absolute inset-0 bg-black/40" />
 
-        <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-[#050407]/90" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/5 to-[#050407]/95" />
 
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_35%,rgba(5,4,8,0.42)_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_20%,rgba(5,4,8,0.22)_55%,rgba(5,4,8,0.82)_100%)]" />
+
+        <div className="absolute left-1/2 top-[48%] h-[450px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-violet-700/[0.08] blur-[130px]" />
       </div>
 
       {/* =====================================
-          NAVBAR
+          HEADER
       ====================================== */}
 
       <header className="relative z-30">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-6 sm:px-10 lg:px-14">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-7 sm:px-10 lg:px-14">
 
           <button
             type="button"
-            onClick={() => navigate("/")}
-            className="text-2xl font-bold tracking-[0.15em] text-violet-400 sm:text-3xl"
-            style={{
-              fontFamily:
-                '"Cormorant Garamond", serif',
-            }}
+            onClick={() => navigate("/whos-watching")}
+            className="group flex items-center gap-3"
           >
-            STREAM
+            <span
+              className="text-2xl font-bold tracking-[0.18em] text-violet-300 transition group-hover:text-violet-200 sm:text-3xl"
+              style={{
+                fontFamily:
+                  '"Cormorant Garamond", serif',
+              }}
+            >
+              STREAM
+            </span>
+
+            <span className="hidden h-1 w-1 rounded-full bg-fuchsia-400 shadow-[0_0_10px_rgba(232,121,249,0.8)] sm:block" />
           </button>
 
           {profiles.length > 0 && (
-            <button
-              type="button"
-              className="text-sm text-white/55 transition hover:text-white"
-            >
-              Manage Profiles
-            </button>
+            <div className="rounded-full border border-white/10 bg-black/20 px-4 py-2 text-[10px] uppercase tracking-[0.18em] text-white/40 backdrop-blur-xl">
+              {profiles.length}{" "}
+              {profiles.length === 1
+                ? "Profile"
+                : "Profiles"}
+            </div>
           )}
 
         </div>
       </header>
 
       {/* =====================================
-          BACK BUTTON
-      ====================================== */}
-
-      <div className="relative z-30 mx-auto mt-1 w-full max-w-7xl px-6 sm:px-10 lg:px-14">
-
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="group inline-flex items-center gap-3 text-sm text-white/45 transition hover:text-white"
-        >
-          <span className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-black/20 text-base backdrop-blur-xl transition duration-300 group-hover:-translate-x-1 group-hover:border-violet-400/40 group-hover:bg-violet-500/10">
-            ←
-          </span>
-
-          <span className="hidden sm:block">
-            Back
-          </span>
-        </button>
-
-      </div>
-
-      {/* =====================================
           MAIN CONTENT
       ====================================== */}
 
-      <section className="relative z-20 flex min-h-[calc(100vh-120px)] items-center justify-center px-5 pb-20">
+      <section className="relative z-20 flex min-h-[calc(100vh-92px)] items-center justify-center px-5 pb-24">
 
         <div className="w-full max-w-5xl text-center">
 
-          <p className="text-[10px] font-semibold uppercase tracking-[0.34em] text-violet-300">
-            Choose a profile
-          </p>
+          <div className="inline-flex items-center gap-3">
+
+            <span className="h-px w-8 bg-gradient-to-r from-transparent to-violet-300/70" />
+
+            <p className="text-[9px] font-semibold uppercase tracking-[0.42em] text-violet-200 sm:text-[10px]">
+              Choose your space
+            </p>
+
+            <span className="h-px w-8 bg-gradient-to-l from-transparent to-violet-300/70" />
+
+          </div>
 
           <h1
-            className="mt-4 text-4xl font-semibold sm:text-5xl lg:text-[58px]"
+            className="mt-4 text-[44px] font-semibold leading-none tracking-[-0.025em] drop-shadow-[0_8px_30px_rgba(0,0,0,0.55)] sm:text-6xl lg:text-[72px]"
             style={{
               fontFamily:
                 '"Cormorant Garamond", serif',
@@ -392,77 +477,115 @@ export default function WhosWatching() {
             Who&apos;s watching?
           </h1>
 
-          <p className="mx-auto mt-3 max-w-lg text-sm text-white/55 sm:text-base">
-            Pick a profile or create a new one to
-            start watching.
+          <p className="mx-auto mt-4 max-w-md text-sm leading-6 text-white/55 sm:text-[15px]">
+            Choose a profile and step back into your
+            world of stories.
           </p>
 
-          {/* PROFILES */}
+          {/* =====================================
+              PROFILE STAGE
+          ====================================== */}
 
-          <div className="mt-10 flex flex-wrap items-start justify-center gap-6">
+          <div className="mx-auto mt-10 w-fit max-w-full rounded-[32px] border border-white/[0.08] bg-black/[0.16] px-6 py-7 shadow-[0_30px_100px_rgba(0,0,0,0.4)] backdrop-blur-[7px] sm:px-9 sm:py-8">
 
-            {profiles.map((profile) => (
-              <button
-                key={profile.id}
-                type="button"
-                onClick={() =>
-                  handleProfileClick(profile)
-                }
-                className="group w-[105px] sm:w-[118px]"
-              >
-                <div className="relative aspect-square overflow-hidden rounded-[20px] border border-white/10 shadow-[0_18px_55px_rgba(0,0,0,0.4)] transition duration-300 group-hover:-translate-y-2 group-hover:border-violet-400/60">
+            {profilesLoading ? (
+              <div className="flex min-h-[126px] min-w-[180px] items-center justify-center">
 
-                  <CharacterAvatar
-                    avatar={profile.avatar}
-                    className="h-full w-full"
-                  />
+                <div>
+                  <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-white/15 border-t-violet-300" />
 
-                  {profile.kids && (
-                    <span className="absolute bottom-2 right-2 rounded-full bg-black/70 px-2 py-1 text-[7px] font-bold uppercase tracking-wider">
-                      Kids
-                    </span>
-                  )}
-
-                </div>
-
-                <p className="mt-3 truncate text-sm text-white/70 group-hover:text-white">
-                  {profile.name}
-                </p>
-              </button>
-            ))}
-
-            {/* ADD PROFILE */}
-
-            <button
-              type="button"
-              onClick={openModal}
-              className="group w-[105px] sm:w-[118px]"
-            >
-              <div className="flex aspect-square items-center justify-center rounded-[20px] border border-dashed border-white/20 bg-black/20 backdrop-blur-sm transition duration-300 group-hover:-translate-y-2 group-hover:border-violet-400/60 group-hover:bg-violet-500/10">
-
-                <div className="relative h-10 w-10">
-                  <span className="absolute left-1/2 top-0 h-full w-[2px] -translate-x-1/2 bg-white/50 group-hover:bg-violet-200" />
-
-                  <span className="absolute left-0 top-1/2 h-[2px] w-full -translate-y-1/2 bg-white/50 group-hover:bg-violet-200" />
+                  <p className="mt-3 text-[10px] uppercase tracking-[0.18em] text-white/30">
+                    Loading profiles
+                  </p>
                 </div>
 
               </div>
+            ) : (
+              <div className="flex max-w-[850px] flex-wrap items-start justify-center gap-6 sm:gap-8">
 
-              <p className="mt-3 text-sm text-white/45 group-hover:text-white">
-                Add Profile
-              </p>
-            </button>
+                {/* EXISTING PROFILES */}
+
+                {profiles.map((profile) => (
+                  <button
+                    key={profile.id}
+                    type="button"
+                    onClick={() =>
+                      handleProfileClick(profile)
+                    }
+                    className="group w-[108px] sm:w-[126px]"
+                  >
+
+                    <div className="relative aspect-square overflow-hidden rounded-[24px] border border-white/10 bg-black/30 shadow-[0_18px_55px_rgba(0,0,0,0.5)] transition-all duration-500 group-hover:-translate-y-2 group-hover:scale-[1.035] group-hover:border-violet-300/70 group-hover:shadow-[0_24px_70px_rgba(124,58,237,0.23)]">
+
+                      <CharacterAvatar
+                        avatar={profile.avatar}
+                        className="h-full w-full transition duration-500 group-hover:scale-105"
+                      />
+
+                      <div className="pointer-events-none absolute inset-0 opacity-0 ring-1 ring-inset ring-violet-300/40 transition duration-500 group-hover:opacity-100" />
+
+                      {profile.kids && (
+                        <span className="absolute bottom-2.5 right-2.5 rounded-full border border-white/10 bg-black/70 px-2 py-1 text-[7px] font-bold uppercase tracking-wider backdrop-blur-md">
+                          Kids
+                        </span>
+                      )}
+
+                    </div>
+
+                    <p className="mt-3 truncate text-sm font-medium text-white/65 transition group-hover:text-white">
+                      {profile.name}
+                    </p>
+
+                  </button>
+                ))}
+
+                {/* ADD PROFILE */}
+
+                <button
+                  type="button"
+                  onClick={openModal}
+                  className="group w-[108px] sm:w-[126px]"
+                >
+
+                  <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-[24px] border border-white/[0.14] bg-white/[0.045] shadow-[0_18px_55px_rgba(0,0,0,0.35)] backdrop-blur-xl transition-all duration-500 group-hover:-translate-y-2 group-hover:scale-[1.035] group-hover:border-violet-300/60 group-hover:bg-violet-500/[0.12] group-hover:shadow-[0_24px_70px_rgba(124,58,237,0.22)]">
+
+                    <div className="absolute inset-4 rounded-[18px] bg-gradient-to-br from-white/[0.025] to-violet-500/[0.04]" />
+
+                    <div className="relative flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-black/20 transition duration-500 group-hover:rotate-90 group-hover:border-violet-300/40 group-hover:bg-violet-500/10">
+
+                      <span className="absolute h-6 w-[1.5px] rounded-full bg-white/60 transition group-hover:bg-violet-100" />
+
+                      <span className="absolute h-[1.5px] w-6 rounded-full bg-white/60 transition group-hover:bg-violet-100" />
+
+                    </div>
+
+                  </div>
+
+                  <p className="mt-3 text-sm font-medium text-white/45 transition group-hover:text-white">
+                    Add Profile
+                  </p>
+
+                </button>
+
+              </div>
+            )}
 
           </div>
 
-          {profiles.length > 0 && (
-            <button
-              type="button"
-              className="mt-9 rounded-lg border border-white/15 bg-black/20 px-5 py-2.5 text-xs text-white/55 backdrop-blur-md transition hover:text-white"
-            >
-              Manage Profiles
-            </button>
-          )}
+          {/* DETAIL */}
+
+          <div className="mx-auto mt-7 flex max-w-lg items-center justify-center gap-3">
+
+            <span className="h-px flex-1 bg-gradient-to-r from-transparent to-white/10" />
+
+            <p className="text-[9px] uppercase tracking-[0.14em] text-white/30 sm:text-[10px]">
+              Your watchlist · Your history · Your
+              recommendations
+            </p>
+
+            <span className="h-px flex-1 bg-gradient-to-l from-transparent to-white/10" />
+
+          </div>
 
         </div>
       </section>
@@ -472,66 +595,24 @@ export default function WhosWatching() {
       ====================================== */}
 
       {showModal && (
-        <div
-          className="
-            fixed
-            inset-0
-            z-[100]
-            grid
-            place-items-center
-            overflow-hidden
-            px-4
-            py-4
-          "
-        >
-
-          {/* DARK BACKDROP */}
+        <div className="fixed inset-0 z-[100] grid place-items-center overflow-hidden px-4 py-4">
 
           <button
             type="button"
             aria-label="Close modal"
             onClick={closeModal}
-            className="absolute inset-0 bg-black/45 backdrop-blur-[2px]"
+            className="absolute inset-0 bg-black/55 backdrop-blur-[3px]"
           />
 
-          {/* =================================
-              MODAL
-
-              NO INTERNAL SCROLL ON DESKTOP
-          ================================== */}
-
-          <div
-            className="
-              relative
-              z-10
-              w-full
-              max-w-[720px]
-              overflow-hidden
-              rounded-[24px]
-              border
-              border-white/10
-              bg-[#0b0910]/92
-              shadow-[0_35px_120px_rgba(0,0,0,0.75)]
-              backdrop-blur-2xl
-
-              max-h-[94vh]
-              overflow-y-auto
-
-              md:max-h-none
-              md:overflow-y-hidden
-            "
-          >
-
-            {/* GLOW */}
+          <div className="relative z-10 max-h-[94vh] w-full max-w-[720px] overflow-y-auto rounded-[24px] border border-white/10 bg-[#0b0910]/95 shadow-[0_35px_120px_rgba(0,0,0,0.75)] backdrop-blur-2xl md:max-h-none md:overflow-y-hidden">
 
             <div className="pointer-events-none absolute -right-20 -top-20 h-60 w-60 rounded-full bg-violet-600/15 blur-[90px]" />
-
-            {/* CLOSE */}
 
             <button
               type="button"
               onClick={closeModal}
-              className="absolute right-5 top-5 z-20 flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-lg text-white/50 transition hover:bg-white/10 hover:text-white"
+              disabled={savingProfile}
+              className="absolute right-5 top-5 z-20 flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-lg text-white/50 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
             >
               ×
             </button>
@@ -563,9 +644,7 @@ export default function WhosWatching() {
 
               </div>
 
-              {/* =================================
-                  TOP ROW
-              ================================== */}
+              {/* PREVIEW + NAME */}
 
               <div className="mt-5 grid items-center gap-5 sm:grid-cols-[78px_1fr]">
 
@@ -584,12 +663,21 @@ export default function WhosWatching() {
                     type="text"
                     value={name}
                     autoFocus
+                    disabled={savingProfile}
                     onChange={(event) => {
                       setName(event.target.value);
                       setError("");
                     }}
+                    onKeyDown={(event) => {
+                      if (
+                        event.key === "Enter" &&
+                        !savingProfile
+                      ) {
+                        handleSaveProfile();
+                      }
+                    }}
                     placeholder="Enter a name"
-                    className="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-violet-400/60"
+                    className="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-violet-400/60 disabled:opacity-50"
                   />
 
                   {error && (
@@ -602,9 +690,7 @@ export default function WhosWatching() {
 
               </div>
 
-              {/* =================================
-                  AVATARS
-              ================================== */}
+              {/* CHARACTER SELECTOR */}
 
               <div className="mt-5 border-t border-white/[0.07] pt-4">
 
@@ -622,14 +708,13 @@ export default function WhosWatching() {
 
                   </div>
 
-                  {/* FILTER */}
-
                   <div className="flex rounded-full border border-white/10 bg-black/20 p-1">
 
                     {categories.map((item) => (
                       <button
                         key={item}
                         type="button"
+                        disabled={savingProfile}
                         onClick={() =>
                           setCategory(item)
                         }
@@ -647,11 +732,7 @@ export default function WhosWatching() {
 
                 </div>
 
-                {/* =================================
-                    NO HORIZONTAL SCROLL
-
-                    GRID WRAPS INSIDE MODAL
-                ================================== */}
+                {/* AVATARS */}
 
                 <div className="mt-4 grid grid-cols-4 gap-3 sm:grid-cols-8">
 
@@ -664,26 +745,15 @@ export default function WhosWatching() {
                         key={avatar.id}
                         type="button"
                         title={avatar.name}
+                        disabled={savingProfile}
                         onClick={() =>
                           setSelectedAvatar(avatar)
                         }
-                        className={`
-                          group
-                          relative
-                          aspect-square
-                          min-w-0
-                          overflow-hidden
-                          rounded-[15px]
-                          border
-                          transition
-                          duration-300
-
-                          ${
-                            active
-                              ? "scale-[1.04] border-violet-400 ring-2 ring-violet-500/20"
-                              : "border-white/10 opacity-70 hover:-translate-y-1 hover:border-white/30 hover:opacity-100"
-                          }
-                        `}
+                        className={`group relative aspect-square min-w-0 overflow-hidden rounded-[15px] border transition duration-300 ${
+                          active
+                            ? "scale-[1.04] border-violet-400 ring-2 ring-violet-500/20"
+                            : "border-white/10 opacity-70 hover:-translate-y-1 hover:border-white/30 hover:opacity-100"
+                        }`}
                       >
 
                         <CharacterAvatar
@@ -705,13 +775,12 @@ export default function WhosWatching() {
 
               </div>
 
-              {/* =================================
-                  KIDS
-              ================================== */}
+              {/* KIDS PROFILE */}
 
               <div className="mt-5 flex items-center justify-between border-t border-white/[0.07] pt-4">
 
                 <div>
+
                   <p className="text-sm font-medium">
                     Kids Profile
                   </p>
@@ -719,10 +788,12 @@ export default function WhosWatching() {
                   <p className="mt-0.5 text-xs text-white/30">
                     Age-appropriate titles only.
                   </p>
+
                 </div>
 
                 <button
                   type="button"
+                  disabled={savingProfile}
                   onClick={() =>
                     setKidsProfile(
                       (current) => !current
@@ -745,16 +816,15 @@ export default function WhosWatching() {
 
               </div>
 
-              {/* =================================
-                  ACTIONS
-              ================================== */}
+              {/* ACTIONS */}
 
               <div className="mt-5 flex items-center justify-end gap-2">
 
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="rounded-lg px-4 py-2 text-sm text-white/40 transition hover:bg-white/[0.05] hover:text-white"
+                  disabled={savingProfile}
+                  className="rounded-lg px-4 py-2 text-sm text-white/40 transition hover:bg-white/[0.05] hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
                 >
                   Cancel
                 </button>
@@ -762,20 +832,26 @@ export default function WhosWatching() {
                 <button
                   type="button"
                   onClick={handleSaveProfile}
-                  className="rounded-lg bg-gradient-to-r from-violet-700 via-purple-600 to-fuchsia-600 px-5 py-2 text-sm font-semibold shadow-[0_10px_30px_rgba(124,58,237,0.25)] transition hover:scale-[1.02]"
+                  disabled={savingProfile}
+                  className="min-w-[135px] rounded-lg bg-gradient-to-r from-violet-700 via-purple-600 to-fuchsia-600 px-5 py-2 text-sm font-semibold shadow-[0_10px_30px_rgba(124,58,237,0.25)] transition hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100"
                 >
-                  Save Profile
-                  <span className="ml-2">
-                    →
-                  </span>
+                  {savingProfile ? (
+                    <span className="inline-flex items-center gap-2">
+                      <span className="h-3.5 w-3.5 animate-spin rounded-full border border-white/30 border-t-white" />
+                      Saving...
+                    </span>
+                  ) : (
+                    <>
+                      Save Profile
+                      <span className="ml-2">→</span>
+                    </>
+                  )}
                 </button>
 
               </div>
 
             </div>
-
           </div>
-
         </div>
       )}
 

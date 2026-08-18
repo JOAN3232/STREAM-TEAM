@@ -36,9 +36,16 @@
 
         <!-- ==Mongodb == -->
        <dependency>
-       <groupId>org.springframework.boot</groupId>
-       <artifactId>spring-boot-starter-data-mongodb</artifactId/>
+             <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-mongodb</artifactId>
        </dependency>
+
+                    <!-- MAIL  -->
+
+     <dependency>
+             <groupId>org.springframework.boot</groupId>
+             <artifactId>spring-boot-starter-mail</artifactId>
+     </dependency>
 
         <!-- Validation -->
         <dependency>
