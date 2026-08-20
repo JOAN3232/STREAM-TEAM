@@ -4,13 +4,9 @@ public class PaymentRequest {
 
     private String email;
     private String plan;
+    private String userId;
 
     public PaymentRequest() {
-    }
-
-    public PaymentRequest(String email, String plan) {
-        this.email = email;
-        this.plan = plan;
     }
 
     public String getEmail() {
@@ -27,5 +23,13 @@ public class PaymentRequest {
 
     public void setPlan(String plan) {
         this.plan = plan;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
     }
 }

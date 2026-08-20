@@ -5,8 +5,6 @@ import {
   useSearchParams,
 } from "react-router-dom";
 
-import { selectPlan } from "../services/authService";
-
 const planDetails = {
   basic: {
     name: "Basic",
@@ -44,6 +42,7 @@ export default function Payment() {
     useState("paystack");
 
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [isScrolled, setIsScrolled] = useState(false);
 
   /* =========================================
@@ -69,83 +68,97 @@ export default function Payment() {
   }, []);
 
   /* =========================================
-     SAVE PLAN + START PAYSTACK
+     START PAYSTACK PAYMENT
   ========================================= */
 
   const handleContinue = async () => {
-    if (loading) return;
-
-    if (!email) {
-      alert(
-        "Your email address is missing. Please sign in again."
-      );
-      return;
-    }
-
     try {
       setLoading(true);
+      setError("");
 
-      /* -----------------------------------------
-         1. SAVE SELECTED PLAN TO USER ACCOUNT
-      ----------------------------------------- */
-
-      const token = localStorage.getItem("token");
-
-      if (token) {
-        await selectPlan(planId);
+      if (!email) {
+        setError(
+          "Your email address is missing. Please return and try again."
+        );
+        setLoading(false);
+        return;
       }
 
-      /* -----------------------------------------
-         2. INITIALIZE PAYSTACK PAYMENT
-      ----------------------------------------- */
+      /*
+       * In the current STREAM auth setup,
+       * "token" stores the logged-in MongoDB
+       * user ID.
+       */
+      const userId =
+        localStorage.getItem("token");
+
+      if (!userId) {
+        setError(
+          "Please sign in again before continuing to payment."
+        );
+        setLoading(false);
+        return;
+      }
 
       const response = await fetch(
         "http://localhost:8081/api/payments/initialize",
         {
           method: "POST",
+
           headers: {
             "Content-Type": "application/json",
           },
+
           body: JSON.stringify({
             email,
             plan: planId,
+            userId,
           }),
         }
       );
 
-      if (!response.ok) {
-        const errorText = await response.text();
+      let result;
 
+      try {
+        result = await response.json();
+      } catch {
         throw new Error(
-          errorText ||
-            "Unable to initialize payment"
+          "The payment server returned an invalid response."
         );
       }
 
-      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(
+          result?.message ||
+            "Unable to initialize payment."
+        );
+      }
 
       const authorizationUrl =
         result?.data?.authorization_url;
 
       if (!authorizationUrl) {
         throw new Error(
-          "Payment authorization URL was not returned"
+          "Paystack authorization URL was not returned."
         );
       }
 
-      /* -----------------------------------------
-         3. SEND USER TO PAYSTACK
-      ----------------------------------------- */
+      /* =====================================
+         SEND USER TO PAYSTACK
+      ====================================== */
 
-      window.location.href = authorizationUrl;
+      window.location.href =
+        authorizationUrl;
+
     } catch (error) {
       console.error(
         "Payment initialization failed:",
         error
       );
 
-      alert(
-        "Unable to start payment. Please try again."
+      setError(
+        error?.message ||
+          "Unable to start payment. Please try again."
       );
 
       setLoading(false);
@@ -470,6 +483,20 @@ export default function Payment() {
 
             </div>
 
+            {/* =================================
+                PAYMENT ERROR
+            ================================== */}
+
+            {error && (
+              <div className="mt-5 rounded-xl border border-red-400/20 bg-red-500/[0.08] px-4 py-3">
+
+                <p className="text-center text-xs leading-5 text-red-300">
+                  {error}
+                </p>
+
+              </div>
+            )}
+
             {/* CTA */}
 
             <button
@@ -528,8 +555,9 @@ export default function Payment() {
             </button>
 
             <p className="mt-4 text-center text-[10px] leading-5 text-white/30">
-              Your selected plan will be linked to
-              your STREAM account before checkout.
+              Your membership will be activated
+              after your payment is successfully
+              verified.
             </p>
 
           </div>

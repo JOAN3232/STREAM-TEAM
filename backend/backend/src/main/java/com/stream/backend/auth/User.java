@@ -3,6 +3,8 @@ package com.stream.backend.auth;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.time.Instant;
+
 @Document(collection = "users")
 public class User {
 
@@ -11,10 +13,15 @@ public class User {
 
     private String email;
     private String password;
-
     private boolean emailVerified;
 
     private String selectedPlan;
+
+    // Subscription/payment information
+    private String subscriptionStatus;
+    private String paymentReference;
+    private Instant subscriptionStartDate;
+    private Instant subscriptionEndDate;
 
     private String verificationToken;
 
@@ -64,6 +71,38 @@ public class User {
 
     public void setSelectedPlan(String selectedPlan) {
         this.selectedPlan = selectedPlan;
+    }
+
+    public String getSubscriptionStatus() {
+        return subscriptionStatus;
+    }
+
+    public void setSubscriptionStatus(String subscriptionStatus) {
+        this.subscriptionStatus = subscriptionStatus;
+    }
+
+    public String getPaymentReference() {
+        return paymentReference;
+    }
+
+    public void setPaymentReference(String paymentReference) {
+        this.paymentReference = paymentReference;
+    }
+
+    public Instant getSubscriptionStartDate() {
+        return subscriptionStartDate;
+    }
+
+    public void setSubscriptionStartDate(Instant subscriptionStartDate) {
+        this.subscriptionStartDate = subscriptionStartDate;
+    }
+
+    public Instant getSubscriptionEndDate() {
+        return subscriptionEndDate;
+    }
+
+    public void setSubscriptionEndDate(Instant subscriptionEndDate) {
+        this.subscriptionEndDate = subscriptionEndDate;
     }
 
     public String getVerificationToken() {
