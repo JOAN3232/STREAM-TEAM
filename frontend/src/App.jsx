@@ -13,11 +13,18 @@ import VerifyEmail from "./pages/VerifyEmail";
 import Plans from "./pages/Plans";
 import SetPassword from "./pages/SetPassword";
 import Payment from "./pages/Payment";
+import PaymentCallback from "./pages/PaymentCallback";
 import WhosWatching from "./pages/WhosWatching";
-import  Browse from "./pages/Browse";
+import TVShows from "./pages/TVShows";
+import NewPopular from "./pages/New-Poplular";
+import MyList from "./pages/MyList";
+import Settings from "./pages/Settings";
+
+import Browse from "./pages/Browse";
+import Movies from "./pages/Movies";
 import MovieDetails from "./pages/MovieDetails";
 import Player from "./pages/Player";
-import PaymentCallback from "./pages/PaymentCallback";
+
 function Home() {
   return (
     <>
@@ -40,70 +47,51 @@ export default function App() {
   return (
     <div key={location.pathname} className="page-transition">
       <Routes location={location}>
+        {/* PUBLIC */}
+
         <Route path="/" element={<Home />} />
 
-        <Route
-          path="/login"
-          element={<Login />}
-        />
+        <Route path="/login" element={<Login />} />
 
-        <Route
-          path="/register-intro"
-          element={<RegisterIntro />}
-        />
+        <Route path="/register-intro" element={<RegisterIntro />} />
 
-        <Route
-          path="/verify-email"
-          element={<VerifyEmail />}
-        />
+        <Route path="/verify-email" element={<VerifyEmail />} />
 
-        <Route
-          path="/plans"
-          element={<Plans />}
-        />
+        <Route path="/set-password" element={<SetPassword />} />
 
-        <Route 
-        path="/set-password" 
-        element={<SetPassword />} 
-        />
+        <Route path="/plans" element={<Plans />} />
 
-        <Route
-          path="/payment"
-          element={<Payment />}
-        />
+        <Route path="/payment" element={<Payment />} />
 
-        <Route
-          path="/whos-watching"
-          element={<WhosWatching />}
-        />
+        <Route path="/payment/callback" element={<PaymentCallback />} />
 
-        <Route
-          path="/browse"
-          element={<Browse />}
-        />
+        {/* STREAM APP */}
 
-        <Route
-          path="/title/:id"
-          element={<MovieDetails />}
-        />
+        <Route path="/whos-watching" element={<WhosWatching />} />
 
-        <Route
-          path="/title/:mediaType/:id"
-          element={<MovieDetails />}
-        />
+        <Route path="/browse" element={<Browse />} />
 
-        <Route
-          path="/watch/movie/:id"
-          element={<Player />}
-        />
+        <Route path="/movies" element={<Movies />} />
 
-        <Route
-          path="/watch/:mediaType/:id"
-          element={<Player />}
-        />
+        {/* DETAILS */}
 
-        <Route path="/payment/callback" 
-        element={<PaymentCallback/>} />
+        <Route path="/title/:id" element={<MovieDetails />} />
+
+        <Route path="/title/:mediaType/:id" element={<MovieDetails />} />
+
+        {/* PLAYER */}
+
+        <Route path="/watch/movie/:id" element={<Player />} />
+
+        <Route path="/watch/:mediaType/:id" element={<Player />} />
+
+        <Route path="/tv-shows" element={<TVShows />} />
+
+        <Route path="/new-popular" element={<NewPopular />} />
+
+        <Route path="/my-list" element={<MyList />} />
+
+        <Route path="/settings" element={<Settings />} />
       </Routes>
     </div>
   );

@@ -123,8 +123,8 @@ public class AuthService {
     ) {
 
         User user = userRepository
-                .findByEmail(
-                        email.trim().toLowerCase()
+                .findByEmailIgnoreCase(
+                        email.trim()
                 )
                 .orElseThrow(() ->
                         new RuntimeException(

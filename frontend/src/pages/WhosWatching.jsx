@@ -6,86 +6,73 @@ import {
   getTrendingMovies,
 } from "../services/tmdbService";
 
-/* =========================================
-   API
-========================================= */
-
 const PROFILE_API = "http://localhost:8081/api/profiles";
 
 /* =========================================
-   CHARACTER AVATARS
+   PREMIUM AVATARS
 ========================================= */
 
 const CHARACTER_AVATARS = [
   {
-    id: "spiderman",
-    name: "Spider-Man",
-    category: "Heroes",
+    id: "nova",
+    name: "Nova",
     images: [
-      "https://cdn.whitescreen.dev/spider-man-pfp-spider-man-avatar-built-for-strong-identity-and-recognition-agoz-square_hd-0226_800.webp",
-      "https://avatars.pfptown.com/137/spiderman-pfp-2314.png",
+      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=500&h=500&q=90",
     ],
   },
   {
-    id: "wednesday",
-    name: "Wednesday",
-    category: "Girls",
+    id: "aria",
+    name: "Aria",
     images: [
-      "https://www.hindustantimes.com/ht-img/img/2025/08/06/1200x1600/wednesday_1754481889556_1754481889786_1754501831171_1754503080142.jpg",
+      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=500&h=500&q=90",
     ],
   },
   {
-    id: "wonder-woman",
-    name: "Wonder Woman",
-    category: "Girls",
+    id: "zuri",
+    name: "Zuri",
     images: [
-      "https://e0.pxfuel.com/wallpapers/945/442/desktop-wallpaper-wonder-woman-gal-gadot-gal-gadot-wonder-woman-gal-cute-wonder-woman.jpg",
+      "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=500&h=500&q=90",
     ],
   },
   {
-    id: "harley",
-    name: "Harley Quinn",
-    category: "Girls",
+    id: "maya",
+    name: "Maya",
     images: [
-      "https://conteudo.imguol.com.br/c/entretenimento/1c/2017/08/17/arlequina---margot-robbie-1502981761342_v2_1x1.jpg",
+      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=500&h=500&q=90",
     ],
   },
   {
-    id: "gwen",
-    name: "Gwen Stacy",
-    category: "Girls",
+    id: "kai",
+    name: "Kai",
     images: [
-      "https://m.media-amazon.com/images/M/MV5BMzE1MTc4OGMtOTU2OC00Zjg1LWJmMjUtNDQzNTQyMDlmOTRlXkEyXkFqcGc%40._V1_.jpg",
+      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=500&h=500&q=90",
     ],
   },
   {
-    id: "barbie",
-    name: "Barbie",
-    category: "Girls",
+    id: "ace",
+    name: "Ace",
     images: [
-      "https://i.pinimg.com/736x/a4/ed/44/a4ed44bcb3249df6bfecf43072cb0321.jpg",
+      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=500&h=500&q=90",
     ],
   },
   {
-    id: "batman",
-    name: "Batman",
-    category: "Heroes",
+    id: "leo",
+    name: "Leo",
     images: [
-      "https://cdn.whitescreen.dev/batman-pfp-batman-avatar-with-stoic-expression-and-clean-composition-nocl-square_hd-b252_800.webp",
+      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=500&h=500&q=90",
     ],
   },
   {
-    id: "deadpool",
-    name: "Deadpool",
-    category: "Heroes",
+    id: "noah",
+    name: "Noah",
     images: [
-      "https://avatarfiles.alphacoders.com/129/129094.jpg",
+      "https://images.unsplash.com/photo-1519345182560-3f2917c472ef?auto=format&fit=crop&w=500&h=500&q=90",
     ],
   },
 ];
 
 /* =========================================
-   CHARACTER AVATAR
+   AVATAR COMPONENT
 ========================================= */
 
 function CharacterAvatar({ avatar, className = "" }) {
@@ -123,58 +110,75 @@ function CharacterAvatar({ avatar, className = "" }) {
         />
       ) : (
         <div className="flex h-full w-full items-center justify-center">
-          <span
-            className="text-xl font-semibold text-white/90"
-            style={{
-              fontFamily: '"Cormorant Garamond", serif',
-            }}
-          >
+          <span className="text-xl font-semibold text-white">
             {avatar.name.charAt(0)}
           </span>
         </div>
       )}
 
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-white/[0.04]" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-white/[0.04]" />
     </div>
   );
 }
-
-/* =========================================
-   PAGE
-========================================= */
 
 export default function WhosWatching() {
   const navigate = useNavigate();
 
   const [backgrounds, setBackgrounds] = useState([]);
-  const [currentBackground, setCurrentBackground] = useState(0);
+  const [currentBackground, setCurrentBackground] =
+    useState(0);
 
   const [profiles, setProfiles] = useState([]);
-  const [profilesLoading, setProfilesLoading] = useState(true);
+  const [profilesLoading, setProfilesLoading] =
+    useState(true);
 
   const [showModal, setShowModal] = useState(false);
 
   const [name, setName] = useState("");
   const [kidsProfile, setKidsProfile] = useState(false);
   const [error, setError] = useState("");
-  const [savingProfile, setSavingProfile] = useState(false);
+
+  const [savingProfile, setSavingProfile] =
+    useState(false);
 
   const [selectedAvatar, setSelectedAvatar] = useState(
     CHARACTER_AVATARS[0]
   );
 
-  const [category, setCategory] = useState("All");
+  const userId = localStorage.getItem("token");
 
   /* =========================================
-     LOAD SAVED PROFILES FROM MONGODB
+     AUTH
   ========================================= */
 
   useEffect(() => {
+    if (!userId) {
+      navigate("/login");
+    }
+  }, [navigate, userId]);
+
+  /* =========================================
+     LOAD PROFILES
+  ========================================= */
+
+  useEffect(() => {
+    if (!userId) return;
+
     const loadProfiles = async () => {
       try {
         setProfilesLoading(true);
 
-        const response = await fetch(PROFILE_API);
+        const response = await fetch(PROFILE_API, {
+          headers: {
+            "X-User-Id": userId,
+          },
+        });
+
+        if (response.status === 401) {
+          localStorage.removeItem("token");
+          navigate("/login");
+          return;
+        }
 
         if (!response.ok) {
           throw new Error("Unable to load profiles");
@@ -196,17 +200,20 @@ export default function WhosWatching() {
 
         setProfiles(formattedProfiles);
       } catch (error) {
-        console.error("Profile loading failed:", error);
+        console.error(
+          "Profile loading failed:",
+          error
+        );
       } finally {
         setProfilesLoading(false);
       }
     };
 
     loadProfiles();
-  }, []);
+  }, [navigate, userId]);
 
   /* =========================================
-     LOAD MOVIE BACKGROUNDS
+     MOVIE BACKGROUNDS
   ========================================= */
 
   useEffect(() => {
@@ -233,10 +240,6 @@ export default function WhosWatching() {
 
     loadBackgrounds();
   }, []);
-
-  /* =========================================
-     BACKGROUND SLIDESHOW
-  ========================================= */
 
   useEffect(() => {
     if (backgrounds.length <= 1) return;
@@ -267,12 +270,11 @@ export default function WhosWatching() {
     setName("");
     setKidsProfile(false);
     setError("");
-    setCategory("All");
     setSelectedAvatar(CHARACTER_AVATARS[0]);
   };
 
   /* =========================================
-     SAVE PROFILE TO MONGODB
+     SAVE PROFILE
   ========================================= */
 
   const handleSaveProfile = async () => {
@@ -280,6 +282,11 @@ export default function WhosWatching() {
 
     if (!cleanName) {
       setError("Enter a profile name.");
+      return;
+    }
+
+    if (!userId) {
+      navigate("/login");
       return;
     }
 
@@ -293,6 +300,7 @@ export default function WhosWatching() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "X-User-Id": userId,
         },
         body: JSON.stringify({
           name: cleanName,
@@ -300,6 +308,12 @@ export default function WhosWatching() {
           kids: kidsProfile,
         }),
       });
+
+      if (response.status === 401) {
+        localStorage.removeItem("token");
+        navigate("/login");
+        return;
+      }
 
       if (!response.ok) {
         throw new Error("Unable to save profile");
@@ -324,10 +338,12 @@ export default function WhosWatching() {
       setName("");
       setKidsProfile(false);
       setError("");
-      setCategory("All");
       setSelectedAvatar(CHARACTER_AVATARS[0]);
     } catch (error) {
-      console.error("Profile creation failed:", error);
+      console.error(
+        "Profile creation failed:",
+        error
+      );
 
       setError(
         "We couldn't save this profile. Please try again."
@@ -347,7 +363,8 @@ export default function WhosWatching() {
       JSON.stringify({
         id: profile.id,
         name: profile.name,
-        avatarId: profile.avatar?.id || profile.avatarId,
+        avatarId:
+          profile.avatar?.id || profile.avatarId,
         kids: profile.kids,
       })
     );
@@ -359,24 +376,10 @@ export default function WhosWatching() {
     );
   };
 
-  /* =========================================
-     FILTER
-  ========================================= */
-
-  const categories = ["All", "Girls", "Heroes"];
-
-  const shownAvatars =
-    category === "All"
-      ? CHARACTER_AVATARS
-      : CHARACTER_AVATARS.filter(
-          (avatar) => avatar.category === category
-        );
-
   return (
     <main className="relative min-h-screen overflow-x-hidden bg-[#050407] text-white">
-
       {/* =====================================
-          CINEMATIC MOVIE BACKGROUND
+          CINEMATIC BACKGROUND
       ====================================== */}
 
       <div className="fixed inset-0 overflow-hidden">
@@ -416,7 +419,6 @@ export default function WhosWatching() {
 
       <header className="relative z-30">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-7 sm:px-10 lg:px-14">
-
           <button
             type="button"
             onClick={() => navigate("/whos-watching")}
@@ -443,20 +445,16 @@ export default function WhosWatching() {
                 : "Profiles"}
             </div>
           )}
-
         </div>
       </header>
 
       {/* =====================================
-          MAIN CONTENT
+          PROFILE PAGE
       ====================================== */}
 
       <section className="relative z-20 flex min-h-[calc(100vh-92px)] items-center justify-center px-5 pb-24">
-
         <div className="w-full max-w-5xl text-center">
-
           <div className="inline-flex items-center gap-3">
-
             <span className="h-px w-8 bg-gradient-to-r from-transparent to-violet-300/70" />
 
             <p className="text-[9px] font-semibold uppercase tracking-[0.42em] text-violet-200 sm:text-[10px]">
@@ -464,11 +462,10 @@ export default function WhosWatching() {
             </p>
 
             <span className="h-px w-8 bg-gradient-to-l from-transparent to-violet-300/70" />
-
           </div>
 
           <h1
-            className="mt-4 text-[44px] font-semibold leading-none tracking-[-0.025em] drop-shadow-[0_8px_30px_rgba(0,0,0,0.55)] sm:text-6xl lg:text-[72px]"
+            className="mt-4 text-[44px] font-semibold leading-none tracking-[-0.025em] sm:text-6xl lg:text-[72px]"
             style={{
               fontFamily:
                 '"Cormorant Garamond", serif',
@@ -477,20 +474,16 @@ export default function WhosWatching() {
             Who&apos;s watching?
           </h1>
 
-          <p className="mx-auto mt-4 max-w-md text-sm leading-6 text-white/55 sm:text-[15px]">
+          <p className="mx-auto mt-4 max-w-md text-sm leading-6 text-white/55">
             Choose a profile and step back into your
             world of stories.
           </p>
 
-          {/* =====================================
-              PROFILE STAGE
-          ====================================== */}
+          {/* PROFILE CONTAINER */}
 
           <div className="mx-auto mt-10 w-fit max-w-full rounded-[32px] border border-white/[0.08] bg-black/[0.16] px-6 py-7 shadow-[0_30px_100px_rgba(0,0,0,0.4)] backdrop-blur-[7px] sm:px-9 sm:py-8">
-
             {profilesLoading ? (
               <div className="flex min-h-[126px] min-w-[180px] items-center justify-center">
-
                 <div>
                   <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-white/15 border-t-violet-300" />
 
@@ -498,12 +491,10 @@ export default function WhosWatching() {
                     Loading profiles
                   </p>
                 </div>
-
               </div>
             ) : (
               <div className="flex max-w-[850px] flex-wrap items-start justify-center gap-6 sm:gap-8">
-
-                {/* EXISTING PROFILES */}
+                {/* SAVED PROFILES */}
 
                 {profiles.map((profile) => (
                   <button
@@ -514,28 +505,22 @@ export default function WhosWatching() {
                     }
                     className="group w-[108px] sm:w-[126px]"
                   >
-
-                    <div className="relative aspect-square overflow-hidden rounded-[24px] border border-white/10 bg-black/30 shadow-[0_18px_55px_rgba(0,0,0,0.5)] transition-all duration-500 group-hover:-translate-y-2 group-hover:scale-[1.035] group-hover:border-violet-300/70 group-hover:shadow-[0_24px_70px_rgba(124,58,237,0.23)]">
-
+                    <div className="relative aspect-square overflow-hidden rounded-[24px] border border-white/10 bg-black/30 shadow-[0_18px_55px_rgba(0,0,0,0.5)] transition-all duration-500 group-hover:-translate-y-2 group-hover:scale-[1.035] group-hover:border-violet-300/70">
                       <CharacterAvatar
                         avatar={profile.avatar}
                         className="h-full w-full transition duration-500 group-hover:scale-105"
                       />
 
-                      <div className="pointer-events-none absolute inset-0 opacity-0 ring-1 ring-inset ring-violet-300/40 transition duration-500 group-hover:opacity-100" />
-
                       {profile.kids && (
-                        <span className="absolute bottom-2.5 right-2.5 rounded-full border border-white/10 bg-black/70 px-2 py-1 text-[7px] font-bold uppercase tracking-wider backdrop-blur-md">
+                        <span className="absolute bottom-2.5 right-2.5 rounded-full border border-white/10 bg-black/70 px-2 py-1 text-[7px] font-bold uppercase tracking-wider">
                           Kids
                         </span>
                       )}
-
                     </div>
 
                     <p className="mt-3 truncate text-sm font-medium text-white/65 transition group-hover:text-white">
                       {profile.name}
                     </p>
-
                   </button>
                 ))}
 
@@ -546,116 +531,103 @@ export default function WhosWatching() {
                   onClick={openModal}
                   className="group w-[108px] sm:w-[126px]"
                 >
-
-                  <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-[24px] border border-white/[0.14] bg-white/[0.045] shadow-[0_18px_55px_rgba(0,0,0,0.35)] backdrop-blur-xl transition-all duration-500 group-hover:-translate-y-2 group-hover:scale-[1.035] group-hover:border-violet-300/60 group-hover:bg-violet-500/[0.12] group-hover:shadow-[0_24px_70px_rgba(124,58,237,0.22)]">
-
-                    <div className="absolute inset-4 rounded-[18px] bg-gradient-to-br from-white/[0.025] to-violet-500/[0.04]" />
-
-                    <div className="relative flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-black/20 transition duration-500 group-hover:rotate-90 group-hover:border-violet-300/40 group-hover:bg-violet-500/10">
-
-                      <span className="absolute h-6 w-[1.5px] rounded-full bg-white/60 transition group-hover:bg-violet-100" />
-
-                      <span className="absolute h-[1.5px] w-6 rounded-full bg-white/60 transition group-hover:bg-violet-100" />
-
+                  <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-[24px] border border-white/[0.14] bg-white/[0.045] transition-all duration-500 group-hover:-translate-y-2 group-hover:scale-[1.035] group-hover:border-violet-300/60 group-hover:bg-violet-500/[0.12]">
+                    <div className="relative flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-black/20 transition duration-500 group-hover:rotate-90">
+                      <span className="absolute h-6 w-[1.5px] rounded-full bg-white/60" />
+                      <span className="absolute h-[1.5px] w-6 rounded-full bg-white/60" />
                     </div>
-
                   </div>
 
                   <p className="mt-3 text-sm font-medium text-white/45 transition group-hover:text-white">
                     Add Profile
                   </p>
-
                 </button>
-
               </div>
             )}
-
           </div>
 
-          {/* DETAIL */}
-
           <div className="mx-auto mt-7 flex max-w-lg items-center justify-center gap-3">
-
             <span className="h-px flex-1 bg-gradient-to-r from-transparent to-white/10" />
 
-            <p className="text-[9px] uppercase tracking-[0.14em] text-white/30 sm:text-[10px]">
+            <p className="text-[9px] uppercase tracking-[0.14em] text-white/30">
               Your watchlist · Your history · Your
               recommendations
             </p>
 
             <span className="h-px flex-1 bg-gradient-to-l from-transparent to-white/10" />
-
           </div>
-
         </div>
       </section>
 
       {/* =====================================
-          ADD PROFILE MODAL
+          COMPACT ADD PROFILE MODAL
       ====================================== */}
 
       {showModal && (
-        <div className="fixed inset-0 z-[100] grid place-items-center overflow-hidden px-4 py-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          {/* BACKDROP */}
 
           <button
             type="button"
             aria-label="Close modal"
             onClick={closeModal}
-            className="absolute inset-0 bg-black/55 backdrop-blur-[3px]"
+            className="absolute inset-0 bg-black/75 backdrop-blur-[6px]"
           />
 
-          <div className="relative z-10 max-h-[94vh] w-full max-w-[720px] overflow-y-auto rounded-[24px] border border-white/10 bg-[#0b0910]/95 shadow-[0_35px_120px_rgba(0,0,0,0.75)] backdrop-blur-2xl md:max-h-none md:overflow-y-hidden">
+          {/* MODAL */}
 
-            <div className="pointer-events-none absolute -right-20 -top-20 h-60 w-60 rounded-full bg-violet-600/15 blur-[90px]" />
+          <div className="relative z-10 w-full max-w-[760px] overflow-hidden rounded-[28px] border border-white/[0.09] bg-[#0a090e]/95 shadow-[0_35px_120px_rgba(0,0,0,0.85)] backdrop-blur-3xl">
+            {/* GLOW */}
+
+            <div className="pointer-events-none absolute -left-20 -top-28 h-[260px] w-[260px] rounded-full bg-violet-600/[0.13] blur-[90px]" />
+
+            <div className="pointer-events-none absolute -bottom-28 right-0 h-[250px] w-[250px] rounded-full bg-fuchsia-600/[0.08] blur-[90px]" />
+
+            {/* CLOSE */}
 
             <button
               type="button"
               onClick={closeModal}
               disabled={savingProfile}
-              className="absolute right-5 top-5 z-20 flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-lg text-white/50 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+              className="absolute right-5 top-5 z-20 flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-lg text-white/45 transition hover:bg-white/10 hover:text-white"
             >
               ×
             </button>
 
-            <div className="relative p-6 sm:p-7">
-
-              {/* HEADER */}
+            <div className="relative px-7 py-7 sm:px-9">
+              {/* TITLE */}
 
               <div className="pr-12">
-
-                <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-violet-300">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.34em] text-violet-300">
                   New profile
                 </p>
 
                 <h2
-                  className="mt-1.5 text-3xl font-semibold"
+                  className="mt-1.5 text-[34px] font-semibold leading-none text-white"
                   style={{
                     fontFamily:
                       '"Cormorant Garamond", serif',
                   }}
                 >
-                  Add a profile.
+                  Create your space.
                 </h2>
 
-                <p className="mt-1 text-sm text-white/40">
-                  Choose a character and give this
-                  profile a name.
+                <p className="mt-2 text-xs text-white/35">
+                  Choose an avatar and give your profile a
+                  name.
                 </p>
-
               </div>
 
-              {/* PREVIEW + NAME */}
+              {/* NAME + CURRENT AVATAR */}
 
-              <div className="mt-5 grid items-center gap-5 sm:grid-cols-[78px_1fr]">
-
+              <div className="mt-6 grid grid-cols-[82px_1fr] items-center gap-5">
                 <CharacterAvatar
                   avatar={selectedAvatar}
-                  className="mx-auto aspect-square w-[76px] rounded-[17px] border border-violet-400/30 sm:mx-0"
+                  className="h-[82px] w-[82px] rounded-[20px] border border-violet-300/20 shadow-[0_16px_45px_rgba(0,0,0,0.5)]"
                 />
 
                 <div>
-
-                  <label className="text-[9px] font-semibold uppercase tracking-[0.23em] text-white/35">
+                  <label className="text-[9px] font-semibold uppercase tracking-[0.25em] text-white/30">
                     Profile name
                   </label>
 
@@ -664,6 +636,7 @@ export default function WhosWatching() {
                     value={name}
                     autoFocus
                     disabled={savingProfile}
+                    placeholder="Enter your name"
                     onChange={(event) => {
                       setName(event.target.value);
                       setError("");
@@ -676,67 +649,38 @@ export default function WhosWatching() {
                         handleSaveProfile();
                       }
                     }}
-                    placeholder="Enter a name"
-                    className="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-violet-400/60 disabled:opacity-50"
+                    className="mt-2 w-full border-0 border-b border-white/15 bg-transparent pb-2.5 text-[16px] text-white outline-none transition placeholder:text-white/20 focus:border-violet-400"
                   />
 
                   {error && (
-                    <p className="mt-1.5 text-xs text-red-300">
+                    <p className="mt-1.5 text-[11px] text-red-300">
                       {error}
                     </p>
                   )}
-
                 </div>
-
               </div>
 
-              {/* CHARACTER SELECTOR */}
+              {/* AVATAR CHOICES */}
 
-              <div className="mt-5 border-t border-white/[0.07] pt-4">
-
-                <div className="flex flex-wrap items-center justify-between gap-3">
-
+              <div className="mt-6">
+                <div className="flex items-center justify-between">
                   <div>
-
-                    <p className="text-[9px] font-semibold uppercase tracking-[0.27em] text-violet-300">
-                      Choose your character
+                    <p className="text-[9px] font-semibold uppercase tracking-[0.27em] text-white/35">
+                      Choose your avatar
                     </p>
 
-                    <p className="mt-1 text-xs text-white/30">
-                      Pick your STREAM identity.
+                    <p className="mt-1 text-[11px] text-white/25">
+                      Pick the face for your STREAM profile.
                     </p>
-
                   </div>
 
-                  <div className="flex rounded-full border border-white/10 bg-black/20 p-1">
-
-                    {categories.map((item) => (
-                      <button
-                        key={item}
-                        type="button"
-                        disabled={savingProfile}
-                        onClick={() =>
-                          setCategory(item)
-                        }
-                        className={`rounded-full px-3 py-1.5 text-[10px] transition ${
-                          category === item
-                            ? "bg-violet-500/20 text-white"
-                            : "text-white/35 hover:text-white"
-                        }`}
-                      >
-                        {item}
-                      </button>
-                    ))}
-
-                  </div>
-
+                  <span className="text-[10px] font-medium text-violet-300/70">
+                    {selectedAvatar.name}
+                  </span>
                 </div>
 
-                {/* AVATARS */}
-
-                <div className="mt-4 grid grid-cols-4 gap-3 sm:grid-cols-8">
-
-                  {shownAvatars.map((avatar) => {
+                <div className="mt-4 grid grid-cols-8 gap-3">
+                  {CHARACTER_AVATARS.map((avatar) => {
                     const active =
                       selectedAvatar.id === avatar.id;
 
@@ -749,107 +693,102 @@ export default function WhosWatching() {
                         onClick={() =>
                           setSelectedAvatar(avatar)
                         }
-                        className={`group relative aspect-square min-w-0 overflow-hidden rounded-[15px] border transition duration-300 ${
+                        className={`group relative aspect-square min-w-0 overflow-hidden rounded-[17px] transition-all duration-300 ${
                           active
-                            ? "scale-[1.04] border-violet-400 ring-2 ring-violet-500/20"
-                            : "border-white/10 opacity-70 hover:-translate-y-1 hover:border-white/30 hover:opacity-100"
+                            ? "z-10 scale-[1.06] ring-2 ring-violet-400 ring-offset-2 ring-offset-[#0a090e]"
+                            : "opacity-60 hover:-translate-y-1 hover:scale-[1.03] hover:opacity-100"
                         }`}
                       >
-
                         <CharacterAvatar
                           avatar={avatar}
-                          className="h-full w-full"
+                          className="h-full w-full rounded-[17px] transition duration-300 group-hover:scale-105"
                         />
 
                         {active && (
-                          <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-violet-500 text-[8px] font-bold">
+                          <span className="absolute right-1.5 top-1.5 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-white text-[9px] font-black text-black shadow-md">
                             ✓
                           </span>
                         )}
-
                       </button>
                     );
                   })}
-
                 </div>
-
               </div>
 
-              {/* KIDS PROFILE */}
+              {/* BOTTOM */}
 
-              <div className="mt-5 flex items-center justify-between border-t border-white/[0.07] pt-4">
+              <div className="mt-6 flex items-center justify-between border-t border-white/[0.07] pt-5">
+                {/* KIDS */}
 
-                <div>
-
-                  <p className="text-sm font-medium">
-                    Kids Profile
-                  </p>
-
-                  <p className="mt-0.5 text-xs text-white/30">
-                    Age-appropriate titles only.
-                  </p>
-
-                </div>
-
-                <button
-                  type="button"
-                  disabled={savingProfile}
-                  onClick={() =>
-                    setKidsProfile(
-                      (current) => !current
-                    )
-                  }
-                  className={`relative h-6 w-11 flex-none rounded-full transition ${
-                    kidsProfile
-                      ? "bg-gradient-to-r from-violet-600 to-fuchsia-500"
-                      : "bg-white/10"
-                  }`}
-                >
-                  <span
-                    className={`absolute top-[3px] h-[18px] w-[18px] rounded-full bg-white shadow transition ${
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    disabled={savingProfile}
+                    onClick={() =>
+                      setKidsProfile(
+                        (current) => !current
+                      )
+                    }
+                    className={`relative h-[24px] w-[43px] rounded-full transition ${
                       kidsProfile
-                        ? "left-[22px]"
-                        : "left-[3px]"
+                        ? "bg-gradient-to-r from-violet-600 to-fuchsia-500"
+                        : "bg-white/10"
                     }`}
-                  />
-                </button>
+                  >
+                    <span
+                      className={`absolute top-[3px] h-[18px] w-[18px] rounded-full bg-white shadow transition-all ${
+                        kidsProfile
+                          ? "left-[22px]"
+                          : "left-[3px]"
+                      }`}
+                    />
+                  </button>
 
+                  <div>
+                    <p className="text-xs font-medium text-white/75">
+                      Kids Profile
+                    </p>
+
+                    <p className="text-[9px] text-white/25">
+                      Age-appropriate recommendations
+                    </p>
+                  </div>
+                </div>
+
+                {/* ACTIONS */}
+
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={closeModal}
+                    disabled={savingProfile}
+                    className="px-3 py-2 text-xs font-medium text-white/35 transition hover:text-white disabled:opacity-30"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleSaveProfile}
+                    disabled={savingProfile}
+                    className="group min-w-[145px] rounded-full bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 px-5 py-3 text-xs font-semibold text-white shadow-[0_12px_35px_rgba(124,58,237,0.22)] transition hover:scale-[1.025] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {savingProfile ? (
+                      <span className="inline-flex items-center gap-2">
+                        <span className="h-3.5 w-3.5 animate-spin rounded-full border border-white/30 border-t-white" />
+                        Creating...
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-2">
+                        Create Profile
+                        <span className="transition-transform group-hover:translate-x-1">
+                          →
+                        </span>
+                      </span>
+                    )}
+                  </button>
+                </div>
               </div>
-
-              {/* ACTIONS */}
-
-              <div className="mt-5 flex items-center justify-end gap-2">
-
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  disabled={savingProfile}
-                  className="rounded-lg px-4 py-2 text-sm text-white/40 transition hover:bg-white/[0.05] hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
-                >
-                  Cancel
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleSaveProfile}
-                  disabled={savingProfile}
-                  className="min-w-[135px] rounded-lg bg-gradient-to-r from-violet-700 via-purple-600 to-fuchsia-600 px-5 py-2 text-sm font-semibold shadow-[0_10px_30px_rgba(124,58,237,0.25)] transition hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100"
-                >
-                  {savingProfile ? (
-                    <span className="inline-flex items-center gap-2">
-                      <span className="h-3.5 w-3.5 animate-spin rounded-full border border-white/30 border-t-white" />
-                      Saving...
-                    </span>
-                  ) : (
-                    <>
-                      Save Profile
-                      <span className="ml-2">→</span>
-                    </>
-                  )}
-                </button>
-
-              </div>
-
             </div>
           </div>
         </div>
@@ -858,7 +797,6 @@ export default function WhosWatching() {
       {/* BOTTOM GLOW */}
 
       <div className="pointer-events-none fixed bottom-0 left-0 right-0 z-20 h-[2px] bg-gradient-to-r from-transparent via-violet-500 to-transparent shadow-[0_-8px_30px_rgba(168,85,247,0.45)]" />
-
     </main>
   );
 }
