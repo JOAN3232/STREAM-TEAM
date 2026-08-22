@@ -76,6 +76,47 @@ public class ProfileController {
         return ResponseEntity.ok(savedProfile);
     }
 
+    @PutMapping("/{id}")
+public ResponseEntity<?> updateProfile(
+        @RequestHeader(
+                value = "X-User-Id",
+                required = false
+        ) String userId,
+        @PathVariable String id,
+        @RequestBody Profile profile
+) {
+    if (userId == null || userId.isBlank()) {
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(
+                        Map.of(
+                                "success", false,
+                                "message", "Authentication required"
+                        )
+                );
+    }
+
+    try {
+        Profile updatedProfile =
+                profileService.updateProfile(
+                        userId,
+                        id,
+                        profile
+                );
+
+        return ResponseEntity.ok(updatedProfile);
+    } catch (IllegalArgumentException exception) {
+        return ResponseEntity
+                .badRequest()
+                .body(
+                        Map.of(
+                                "success", false,
+                                "message", exception.getMessage()
+                        )
+                );
+    }
+}
+
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteProfile(
             @RequestHeader(

@@ -6,70 +6,12 @@ import {
   getTrendingMovies,
 } from "../services/tmdbService";
 
+import {
+  CHARACTER_AVATARS,
+  getProfileAvatar,
+} from "../data/profileAvatars";
+
 const PROFILE_API = "http://localhost:8081/api/profiles";
-
-/* =========================================
-   PREMIUM AVATARS
-========================================= */
-
-const CHARACTER_AVATARS = [
-  {
-    id: "nova",
-    name: "Nova",
-    images: [
-      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=500&h=500&q=90",
-    ],
-  },
-  {
-    id: "aria",
-    name: "Aria",
-    images: [
-      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=500&h=500&q=90",
-    ],
-  },
-  {
-    id: "zuri",
-    name: "Zuri",
-    images: [
-      "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=500&h=500&q=90",
-    ],
-  },
-  {
-    id: "maya",
-    name: "Maya",
-    images: [
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=500&h=500&q=90",
-    ],
-  },
-  {
-    id: "kai",
-    name: "Kai",
-    images: [
-      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=500&h=500&q=90",
-    ],
-  },
-  {
-    id: "ace",
-    name: "Ace",
-    images: [
-      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=500&h=500&q=90",
-    ],
-  },
-  {
-    id: "leo",
-    name: "Leo",
-    images: [
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=500&h=500&q=90",
-    ],
-  },
-  {
-    id: "noah",
-    name: "Noah",
-    images: [
-      "https://images.unsplash.com/photo-1519345182560-3f2917c472ef?auto=format&fit=crop&w=500&h=500&q=90",
-    ],
-  },
-];
 
 /* =========================================
    AVATAR COMPONENT
@@ -135,15 +77,15 @@ export default function WhosWatching() {
   const [showModal, setShowModal] = useState(false);
 
   const [name, setName] = useState("");
-  const [kidsProfile, setKidsProfile] = useState(false);
+  const [kidsProfile, setKidsProfile] =
+    useState(false);
   const [error, setError] = useState("");
 
   const [savingProfile, setSavingProfile] =
     useState(false);
 
-  const [selectedAvatar, setSelectedAvatar] = useState(
-    CHARACTER_AVATARS[0]
-  );
+  const [selectedAvatar, setSelectedAvatar] =
+    useState(CHARACTER_AVATARS[0]);
 
   const userId = localStorage.getItem("token");
 
@@ -186,23 +128,20 @@ export default function WhosWatching() {
 
         const data = await response.json();
 
-        const formattedProfiles = data.map((profile) => {
-          const avatar =
-            CHARACTER_AVATARS.find(
-              (item) => item.id === profile.avatarId
-            ) || CHARACTER_AVATARS[0];
-
-          return {
+        const formattedProfiles = data.map(
+          (profile) => ({
             ...profile,
-            avatar,
-          };
-        });
+            avatar: getProfileAvatar(
+              profile.avatarId,
+            ),
+          }),
+        );
 
         setProfiles(formattedProfiles);
       } catch (error) {
         console.error(
           "Profile loading failed:",
-          error
+          error,
         );
       } finally {
         setProfilesLoading(false);
@@ -226,14 +165,16 @@ export default function WhosWatching() {
           .slice(0, 8)
           .map((movie) => ({
             id: movie.id,
-            image: getBackdropUrl(movie.backdrop_path),
+            image: getBackdropUrl(
+              movie.backdrop_path,
+            ),
           }));
 
         setBackgrounds(available);
       } catch (error) {
         console.error(
           "Who's Watching background error:",
-          error
+          error,
         );
       }
     };
@@ -248,7 +189,7 @@ export default function WhosWatching() {
       setCurrentBackground((current) =>
         current >= backgrounds.length - 1
           ? 0
-          : current + 1
+          : current + 1,
       );
     }, 6500);
 
@@ -285,6 +226,13 @@ export default function WhosWatching() {
       return;
     }
 
+    if (cleanName.length > 30) {
+      setError(
+        "Profile name must be 30 characters or less.",
+      );
+      return;
+    }
+
     if (!userId) {
       navigate("/login");
       return;
@@ -316,17 +264,29 @@ export default function WhosWatching() {
       }
 
       if (!response.ok) {
-        throw new Error("Unable to save profile");
+        let message = "Unable to save profile";
+
+        try {
+          const result = await response.json();
+
+          if (result?.message) {
+            message = result.message;
+          }
+        } catch {
+          // Keep fallback message.
+        }
+
+        throw new Error(message);
       }
 
-      const savedProfile = await response.json();
+      const savedProfile =
+        await response.json();
 
       const formattedProfile = {
         ...savedProfile,
-        avatar:
-          CHARACTER_AVATARS.find(
-            (item) => item.id === savedProfile.avatarId
-          ) || selectedAvatar,
+        avatar: getProfileAvatar(
+          savedProfile.avatarId,
+        ),
       };
 
       setProfiles((current) => [
@@ -342,11 +302,12 @@ export default function WhosWatching() {
     } catch (error) {
       console.error(
         "Profile creation failed:",
-        error
+        error,
       );
 
       setError(
-        "We couldn't save this profile. Please try again."
+        error?.message ||
+          "We couldn't save this profile. Please try again.",
       );
     } finally {
       setSavingProfile(false);
@@ -363,16 +324,15 @@ export default function WhosWatching() {
       JSON.stringify({
         id: profile.id,
         name: profile.name,
-        avatarId:
-          profile.avatar?.id || profile.avatarId,
+        avatarId: profile.avatarId,
         kids: profile.kids,
-      })
+      }),
     );
 
     navigate(
       `/browse?profile=${encodeURIComponent(
-        profile.name
-      )}`
+        profile.name,
+      )}`,
     );
   };
 
@@ -421,7 +381,9 @@ export default function WhosWatching() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-7 sm:px-10 lg:px-14">
           <button
             type="button"
-            onClick={() => navigate("/whos-watching")}
+            onClick={() =>
+              navigate("/whos-watching")
+            }
             className="group flex items-center gap-3"
           >
             <span
@@ -475,8 +437,8 @@ export default function WhosWatching() {
           </h1>
 
           <p className="mx-auto mt-4 max-w-md text-sm leading-6 text-white/55">
-            Choose a profile and step back into your
-            world of stories.
+            Choose a profile and step back into
+            your world of stories.
           </p>
 
           {/* PROFILE CONTAINER */}
@@ -560,13 +522,11 @@ export default function WhosWatching() {
       </section>
 
       {/* =====================================
-          COMPACT ADD PROFILE MODAL
+          ADD PROFILE MODAL
       ====================================== */}
 
       {showModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          {/* BACKDROP */}
-
           <button
             type="button"
             aria-label="Close modal"
@@ -574,16 +534,10 @@ export default function WhosWatching() {
             className="absolute inset-0 bg-black/75 backdrop-blur-[6px]"
           />
 
-          {/* MODAL */}
-
           <div className="relative z-10 w-full max-w-[760px] overflow-hidden rounded-[28px] border border-white/[0.09] bg-[#0a090e]/95 shadow-[0_35px_120px_rgba(0,0,0,0.85)] backdrop-blur-3xl">
-            {/* GLOW */}
-
             <div className="pointer-events-none absolute -left-20 -top-28 h-[260px] w-[260px] rounded-full bg-violet-600/[0.13] blur-[90px]" />
 
             <div className="pointer-events-none absolute -bottom-28 right-0 h-[250px] w-[250px] rounded-full bg-fuchsia-600/[0.08] blur-[90px]" />
-
-            {/* CLOSE */}
 
             <button
               type="button"
@@ -613,8 +567,8 @@ export default function WhosWatching() {
                 </h2>
 
                 <p className="mt-2 text-xs text-white/35">
-                  Choose an avatar and give your profile a
-                  name.
+                  Choose an avatar and give your
+                  profile a name.
                 </p>
               </div>
 
@@ -634,6 +588,7 @@ export default function WhosWatching() {
                   <input
                     type="text"
                     value={name}
+                    maxLength={30}
                     autoFocus
                     disabled={savingProfile}
                     placeholder="Enter your name"
@@ -670,7 +625,8 @@ export default function WhosWatching() {
                     </p>
 
                     <p className="mt-1 text-[11px] text-white/25">
-                      Pick the face for your STREAM profile.
+                      Pick the face for your STREAM
+                      profile.
                     </p>
                   </div>
 
@@ -679,45 +635,50 @@ export default function WhosWatching() {
                   </span>
                 </div>
 
-                <div className="mt-4 grid grid-cols-8 gap-3">
-                  {CHARACTER_AVATARS.map((avatar) => {
-                    const active =
-                      selectedAvatar.id === avatar.id;
+                <div className="mt-4 grid grid-cols-4 gap-3 sm:grid-cols-8">
+                  {CHARACTER_AVATARS.map(
+                    (avatar) => {
+                      const active =
+                        selectedAvatar.id ===
+                        avatar.id;
 
-                    return (
-                      <button
-                        key={avatar.id}
-                        type="button"
-                        title={avatar.name}
-                        disabled={savingProfile}
-                        onClick={() =>
-                          setSelectedAvatar(avatar)
-                        }
-                        className={`group relative aspect-square min-w-0 overflow-hidden rounded-[17px] transition-all duration-300 ${
-                          active
-                            ? "z-10 scale-[1.06] ring-2 ring-violet-400 ring-offset-2 ring-offset-[#0a090e]"
-                            : "opacity-60 hover:-translate-y-1 hover:scale-[1.03] hover:opacity-100"
-                        }`}
-                      >
-                        <CharacterAvatar
-                          avatar={avatar}
-                          className="h-full w-full rounded-[17px] transition duration-300 group-hover:scale-105"
-                        />
+                      return (
+                        <button
+                          key={avatar.id}
+                          type="button"
+                          title={avatar.name}
+                          disabled={savingProfile}
+                          onClick={() =>
+                            setSelectedAvatar(
+                              avatar,
+                            )
+                          }
+                          className={`group relative aspect-square min-w-0 overflow-hidden rounded-[17px] transition-all duration-300 ${
+                            active
+                              ? "z-10 scale-[1.06] ring-2 ring-violet-400 ring-offset-2 ring-offset-[#0a090e]"
+                              : "opacity-60 hover:-translate-y-1 hover:scale-[1.03] hover:opacity-100"
+                          }`}
+                        >
+                          <CharacterAvatar
+                            avatar={avatar}
+                            className="h-full w-full rounded-[17px] transition duration-300 group-hover:scale-105"
+                          />
 
-                        {active && (
-                          <span className="absolute right-1.5 top-1.5 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-white text-[9px] font-black text-black shadow-md">
-                            ✓
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
+                          {active && (
+                            <span className="absolute right-1.5 top-1.5 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-white text-[9px] font-black text-black shadow-md">
+                              ✓
+                            </span>
+                          )}
+                        </button>
+                      );
+                    },
+                  )}
                 </div>
               </div>
 
               {/* BOTTOM */}
 
-              <div className="mt-6 flex items-center justify-between border-t border-white/[0.07] pt-5">
+              <div className="mt-6 flex flex-col gap-5 border-t border-white/[0.07] pt-5 sm:flex-row sm:items-center sm:justify-between">
                 {/* KIDS */}
 
                 <div className="flex items-center gap-3">
@@ -726,7 +687,7 @@ export default function WhosWatching() {
                     disabled={savingProfile}
                     onClick={() =>
                       setKidsProfile(
-                        (current) => !current
+                        (current) => !current,
                       )
                     }
                     className={`relative h-[24px] w-[43px] rounded-full transition ${
@@ -734,6 +695,7 @@ export default function WhosWatching() {
                         ? "bg-gradient-to-r from-violet-600 to-fuchsia-500"
                         : "bg-white/10"
                     }`}
+                    aria-pressed={kidsProfile}
                   >
                     <span
                       className={`absolute top-[3px] h-[18px] w-[18px] rounded-full bg-white shadow transition-all ${
@@ -757,7 +719,7 @@ export default function WhosWatching() {
 
                 {/* ACTIONS */}
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center justify-end gap-3">
                   <button
                     type="button"
                     onClick={closeModal}
@@ -781,6 +743,7 @@ export default function WhosWatching() {
                     ) : (
                       <span className="inline-flex items-center gap-2">
                         Create Profile
+
                         <span className="transition-transform group-hover:translate-x-1">
                           →
                         </span>

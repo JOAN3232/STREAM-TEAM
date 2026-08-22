@@ -44,6 +44,49 @@ public class ProfileService {
         return profileRepository.save(profile);
     }
 
+    public Profile updateProfile(
+        String userId,
+        String profileId,
+        Profile updates
+) {
+    Profile profile =
+            getOwnedProfile(userId, profileId);
+
+    if (
+            updates.getName() == null ||
+            updates.getName().isBlank()
+    ) {
+        throw new IllegalArgumentException(
+                "Profile name is required"
+        );
+    }
+
+    String cleanName = updates.getName().trim();
+
+    if (cleanName.length() > 30) {
+        throw new IllegalArgumentException(
+                "Profile name must be 30 characters or less"
+        );
+    }
+
+    if (
+            updates.getAvatarId() == null ||
+            updates.getAvatarId().isBlank()
+    ) {
+        throw new IllegalArgumentException(
+                "Avatar is required"
+        );
+    }
+
+    profile.setName(cleanName);
+    profile.setAvatarId(
+            updates.getAvatarId().trim()
+    );
+    profile.setKids(updates.isKids());
+
+    return profileRepository.save(profile);
+}
+
     public boolean deleteProfile(
             String userId,
             String profileId

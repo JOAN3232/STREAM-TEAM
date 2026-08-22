@@ -150,6 +150,29 @@ function Icon({ name, className = "h-5 w-5" }) {
     ),
 
     check: <path d="m5 12 4 4L19 6" />,
+
+    more: (
+      <>
+        <circle cx="5" cy="12" r="1" fill="currentColor" stroke="none" />
+        <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
+        <circle cx="19" cy="12" r="1" fill="currentColor" stroke="none" />
+      </>
+    ),
+
+    user: (
+      <>
+        <circle cx="12" cy="8" r="4" />
+        <path d="M4 21a8 8 0 0 1 16 0" />
+      </>
+    ),
+
+    logout: (
+      <>
+        <path d="M10 17l5-5-5-5" />
+        <path d="M15 12H3" />
+        <path d="M21 3v18h-7" />
+      </>
+    ),
   };
 
   return (
@@ -228,6 +251,67 @@ function SidebarItem({ icon, label, active, onClick }) {
       </span>
 
       <span className="text-[8px] font-medium">{label}</span>
+    </button>
+  );
+}
+
+
+function MobileNavItem({ icon, label, active, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`relative flex min-w-0 flex-1 flex-col items-center justify-center gap-1 py-2 transition ${
+        active ? "text-violet-300" : "text-white/40"
+      }`}
+    >
+      <Icon name={icon} className="h-[19px] w-[19px]" />
+
+      <span className="max-w-full truncate text-[9px] font-medium">
+        {label}
+      </span>
+
+      {active && (
+        <span className="absolute bottom-1 h-[2px] w-5 rounded-full bg-violet-500 shadow-[0_0_12px_rgba(139,92,246,0.8)]" />
+      )}
+    </button>
+  );
+}
+
+function MobileMenuItem({
+  icon,
+  title,
+  subtitle,
+  onClick,
+  danger = false,
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex w-full items-center gap-4 rounded-xl px-3 py-3 text-left transition ${
+        danger
+          ? "text-red-300 hover:bg-red-400/[0.07]"
+          : "text-white/75 hover:bg-white/[0.05] hover:text-white"
+      }`}
+    >
+      <span
+        className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${
+          danger ? "bg-red-400/[0.08]" : "bg-violet-400/[0.08]"
+        }`}
+      >
+        <Icon name={icon} className="h-[18px] w-[18px]" />
+      </span>
+
+      <span className="min-w-0">
+        <span className="block text-[13px] font-semibold">{title}</span>
+
+        {subtitle && (
+          <span className="mt-0.5 block text-[9px] text-white/30">
+            {subtitle}
+          </span>
+        )}
+      </span>
     </button>
   );
 }
@@ -779,6 +863,8 @@ export default function Browse() {
 
   const [continueWatching, setContinueWatching] = useState([]);
 
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   /* =======================================================
      ACTIVE PROFILE
   ======================================================= */
@@ -1066,11 +1152,33 @@ useEffect(() => {
     setMyListOpen(false);
     setSearchOpen(false);
     setQuery("");
+    setMobileMenuOpen(false);
 
     window.scrollTo({
       top: 0,
       behavior: "smooth",
     });
+  };
+
+  const navigateMobile = (route) => {
+    setMobileMenuOpen(false);
+    setSearchOpen(false);
+    setQuery("");
+    setNoticeOpen(false);
+    setProfileOpen(false);
+    navigate(route);
+  };
+
+  const handleSignOut = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("email");
+    sessionStorage.removeItem("stream_active_profile");
+
+    setMobileMenuOpen(false);
+    setNoticeOpen(false);
+    setProfileOpen(false);
+
+    navigate("/login");
   };
 
   /* =======================================================
@@ -1391,6 +1499,7 @@ useEffect(() => {
                     setNoticeOpen((current) => !current);
 
                     setProfileOpen(false);
+                    setMobileMenuOpen(false);
                   }}
                   className="relative grid h-10 w-10 place-items-center rounded-full text-white/65 transition hover:bg-white/[0.05] hover:text-white"
                 >
@@ -1434,6 +1543,7 @@ useEffect(() => {
                     setProfileOpen((current) => !current);
 
                     setNoticeOpen(false);
+                    setMobileMenuOpen(false);
                   }}
                   className="flex items-center gap-2.5 rounded-full p-1 pr-2.5 transition hover:bg-white/[0.05]"
                 >
@@ -1487,15 +1597,7 @@ useEffect(() => {
 
                     <button
                       type="button"
-                      onClick={() => {
-                        localStorage.removeItem("token");
-
-                        localStorage.removeItem("email");
-
-                        sessionStorage.removeItem("stream_active_profile");
-
-                        navigate("/login");
-                      }}
+                      onClick={handleSignOut}
                       className="block w-full px-4 py-2.5 text-left text-red-300/70 hover:bg-red-400/[0.06] hover:text-red-300"
                     >
                       Sign Out
@@ -1853,6 +1955,121 @@ useEffect(() => {
           </>
         )}
       </div>
+
+      {/* =====================================================
+          MOBILE MORE MENU
+      ====================================================== */}
+
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-[85] bg-black/55 backdrop-blur-[2px] lg:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        >
+          <div
+            onClick={(event) => event.stopPropagation()}
+            className="absolute bottom-[78px] left-3 right-3 overflow-hidden rounded-[24px] border border-violet-300/[0.10] bg-[#100a18]/98 p-3 shadow-[0_-20px_80px_rgba(0,0,0,0.7)] backdrop-blur-2xl"
+          >
+            <div className="flex items-center justify-between border-b border-white/[0.06] px-3 pb-3 pt-1">
+              <div>
+                <p
+                  className="text-lg font-semibold text-violet-300"
+                  style={DISPLAY_FONT}
+                >
+                  STREAM
+                </p>
+
+                <p className="mt-0.5 text-[9px] text-white/30">
+                  More
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(false)}
+                className="grid h-8 w-8 place-items-center rounded-full bg-white/[0.05] text-sm text-white/50"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mt-2">
+              <MobileMenuItem
+                icon="spark"
+                title="New & Popular"
+                subtitle="Discover what's trending"
+                onClick={() => navigateMobile("/new-popular")}
+              />
+
+              <MobileMenuItem
+                icon="settings"
+                title="Settings"
+                subtitle="Manage your STREAM account"
+                onClick={() => navigateMobile("/settings")}
+              />
+
+              <MobileMenuItem
+                icon="user"
+                title="Switch Profile"
+                subtitle={`Currently watching as ${activeName}`}
+                onClick={() => navigateMobile("/whos-watching")}
+              />
+
+              <div className="my-2 h-px bg-white/[0.06]" />
+
+              <MobileMenuItem
+                icon="logout"
+                title="Sign Out"
+                subtitle="Sign out of your STREAM account"
+                danger
+                onClick={handleSignOut}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================
+          MOBILE BOTTOM NAVIGATION
+      ====================================================== */}
+
+      <nav className="fixed bottom-0 left-0 right-0 z-[90] flex h-[70px] items-stretch border-t border-violet-300/[0.08] bg-[#09070d]/95 px-2 pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_40px_rgba(0,0,0,0.35)] backdrop-blur-2xl lg:hidden">
+        <MobileNavItem
+          icon="home"
+          label="Home"
+          active={!myListOpen}
+          onClick={goHome}
+        />
+
+        <MobileNavItem
+          icon="tv"
+          label="TV"
+          onClick={() => navigateMobile("/tv-shows")}
+        />
+
+        <MobileNavItem
+          icon="movie"
+          label="Movies"
+          onClick={() => navigateMobile("/movies")}
+        />
+
+        <MobileNavItem
+          icon="list"
+          label="My List"
+          active={myListOpen}
+          onClick={() => navigateMobile("/my-list")}
+        />
+
+        <MobileNavItem
+          icon="more"
+          label="More"
+          active={mobileMenuOpen}
+          onClick={() => {
+            setNoticeOpen(false);
+            setProfileOpen(false);
+            setMobileMenuOpen((current) => !current);
+          }}
+        />
+      </nav>
     </main>
   );
 }
