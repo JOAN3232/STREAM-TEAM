@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 const UI_FONT = {
@@ -8,6 +8,10 @@ const UI_FONT = {
 const DISPLAY_FONT = {
   fontFamily: '"Cormorant Garamond", "Georgia", serif',
 };
+
+/* =========================================================
+   ICONS
+========================================================= */
 
 function Icon({ name, className = "h-5 w-5" }) {
   const icons = {
@@ -97,12 +101,16 @@ function Icon({ name, className = "h-5 w-5" }) {
   );
 }
 
+/* =========================================================
+   SIDEBAR
+========================================================= */
+
 function SidebarItem({ icon, label, active, onClick }) {
   return (
     <button
       type="button"
-      onClick={onClick}
       title={label}
+      onClick={onClick}
       className={`group relative flex w-full flex-col items-center justify-center gap-1.5 py-3.5 transition ${
         active ? "text-violet-300" : "text-white/30 hover:text-white"
       }`}
@@ -125,6 +133,10 @@ function SidebarItem({ icon, label, active, onClick }) {
     </button>
   );
 }
+
+/* =========================================================
+   MOBILE NAVIGATION
+========================================================= */
 
 function MobileNavItem({ icon, label, active, onClick }) {
   return (
@@ -190,6 +202,10 @@ function MobileMenuItem({
   );
 }
 
+/* =========================================================
+   STREAMING LAYOUT
+========================================================= */
+
 export default function StreamingLayout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -197,12 +213,13 @@ export default function StreamingLayout({ children }) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [noticeOpen, setNoticeOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   let storedProfile = null;
 
   try {
     storedProfile = JSON.parse(
-      sessionStorage.getItem("stream_active_profile")
+      sessionStorage.getItem("stream_active_profile"),
     );
   } catch {
     storedProfile = null;
@@ -222,46 +239,83 @@ export default function StreamingLayout({ children }) {
   const isMoreActive =
     isNew || isSettings || mobileMenuOpen;
 
-  const goMyList = () => {
+  /* =======================================================
+     NAVBAR SCROLL
+  ======================================================= */
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 35);
+    };
+
+    handleScroll();
+
+    window.addEventListener("scroll", handleScroll, {
+      passive: true,
+    });
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
+
+  /* =======================================================
+     NAVIGATION
+  ======================================================= */
+
+  const navigateTo = (route) => {
     setMobileMenuOpen(false);
-    navigate("/my-list");
+    setNoticeOpen(false);
+    setProfileOpen(false);
+
+    navigate(route);
+  };
+
+  const goMyList = () => {
+    navigateTo("/my-list");
   };
 
   const handleSignOut = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("email");
-    sessionStorage.removeItem("stream_active_profile");
+
+    sessionStorage.removeItem(
+      "stream_active_profile",
+    );
 
     setMobileMenuOpen(false);
+    setNoticeOpen(false);
     setProfileOpen(false);
 
     navigate("/login");
   };
 
   const navigateMobile = (route) => {
-    setMobileMenuOpen(false);
-    setNoticeOpen(false);
-    setProfileOpen(false);
-    navigate(route);
+    navigateTo(route);
   };
 
   return (
     <main
-      className="min-h-screen bg-[#050507] text-white"
+      className="min-h-screen overflow-x-hidden bg-[#050507] text-white"
       style={UI_FONT}
       onClick={() => {
-        setNoticeOpen(false);
-        setProfileOpen(false);
+        if (noticeOpen) {
+          setNoticeOpen(false);
+        }
+
+        if (profileOpen) {
+          setProfileOpen(false);
+        }
       }}
     >
-      {/* =====================================
+      {/* =====================================================
           DESKTOP SIDEBAR
-      ====================================== */}
+      ====================================================== */}
 
       <aside className="fixed inset-y-0 left-0 z-[70] hidden w-[72px] flex-col border-r border-white/[0.045] bg-[#07070a]/90 backdrop-blur-xl lg:flex">
         <button
           type="button"
-          onClick={() => navigate("/browse")}
+          onClick={() => navigateTo("/browse")}
           className="flex h-[78px] items-center justify-center border-b border-white/[0.045]"
         >
           <span
@@ -277,28 +331,28 @@ export default function StreamingLayout({ children }) {
             icon="home"
             label="Home"
             active={isHome}
-            onClick={() => navigate("/browse")}
+            onClick={() => navigateTo("/browse")}
           />
 
           <SidebarItem
             icon="tv"
             label="TV"
             active={isTV}
-            onClick={() => navigate("/tv-shows")}
+            onClick={() => navigateTo("/tv-shows")}
           />
 
           <SidebarItem
             icon="movie"
             label="Movies"
             active={isMovies}
-            onClick={() => navigate("/movies")}
+            onClick={() => navigateTo("/movies")}
           />
 
           <SidebarItem
             icon="spark"
             label="New"
             active={isNew}
-            onClick={() => navigate("/new-popular")}
+            onClick={() => navigateTo("/new-popular")}
           />
 
           <SidebarItem
@@ -307,26 +361,41 @@ export default function StreamingLayout({ children }) {
             active={isMyList}
             onClick={goMyList}
           />
-
-          <SidebarItem
-            icon="settings"
-            label="Settings"
-            active={isSettings}
-            onClick={() => navigate("/settings")}
-          />
         </div>
+
+        {/* EXACTLY LIKE BROWSE:
+            Settings is separate at the bottom. */}
+
+        <SidebarItem
+          icon="settings"
+          label="Settings"
+          active={isSettings}
+          onClick={() => navigateTo("/settings")}
+        />
       </aside>
 
-      {/* =====================================
+      {/* =====================================================
           TOP NAVBAR
-      ====================================== */}
+      ====================================================== */}
 
-      <header className="fixed left-0 right-0 top-0 z-[60] border-b border-violet-300/[0.07] bg-[#110a1d]/78 shadow-[0_14px_45px_rgba(0,0,0,0.22)] backdrop-blur-2xl lg:left-[72px]">
-        <div className="flex h-[64px] items-center px-4 sm:h-[68px] sm:px-7 lg:px-12 xl:px-14">
+      <header
+        className={`fixed left-0 right-0 top-0 z-[60] transition-all duration-500 lg:left-[72px] ${
+          scrolled
+            ? "border-b border-violet-300/[0.07] bg-[#110a1d]/78 shadow-[0_14px_45px_rgba(0,0,0,0.22)] backdrop-blur-2xl"
+            : "bg-gradient-to-b from-black/65 via-black/20 to-transparent"
+        }`}
+      >
+        <div
+          className={`flex items-center px-7 transition-all duration-500 sm:px-9 lg:px-12 xl:px-14 ${
+            scrolled ? "h-[68px]" : "h-[78px]"
+          }`}
+        >
+          {/* LOGO */}
+
           <button
             type="button"
-            onClick={() => navigate("/browse")}
-            className="shrink-0 text-[20px] font-semibold tracking-[0.14em] text-violet-400 transition hover:text-violet-300 sm:text-[25px] sm:tracking-[0.16em]"
+            onClick={() => navigateTo("/browse")}
+            className="shrink-0 text-[25px] font-semibold tracking-[0.16em] text-violet-400 transition hover:text-violet-300"
             style={DISPLAY_FONT}
           >
             STREAM
@@ -334,12 +403,13 @@ export default function StreamingLayout({ children }) {
 
           {/* DESKTOP LINKS */}
 
-          <nav className="ml-12 hidden items-center gap-7 md:flex lg:ml-[72px] lg:gap-10 xl:ml-20">
+          <nav className="ml-16 hidden items-center gap-9 md:flex lg:ml-[72px] lg:gap-10 xl:ml-20">
             {[
               ["Home", "/browse"],
               ["TV Shows", "/tv-shows"],
               ["Movies", "/movies"],
               ["New & Popular", "/new-popular"],
+              ["My List", "/my-list"],
             ].map(([label, route]) => {
               const active = pathname === route;
 
@@ -347,8 +417,8 @@ export default function StreamingLayout({ children }) {
                 <button
                   key={label}
                   type="button"
-                  onClick={() => navigate(route)}
-                  className={`group relative whitespace-nowrap py-2 text-[12px] font-medium transition-colors duration-300 lg:text-[14px] ${
+                  onClick={() => navigateTo(route)}
+                  className={`group relative whitespace-nowrap py-2 text-[13px] font-medium tracking-[-0.01em] transition-colors duration-300 lg:text-[14px] ${
                     active
                       ? "text-white"
                       : "text-white/50 hover:text-white"
@@ -366,22 +436,11 @@ export default function StreamingLayout({ children }) {
                 </button>
               );
             })}
-
-            <button
-              type="button"
-              onClick={goMyList}
-              className={`group relative whitespace-nowrap py-2 text-[12px] font-medium transition-colors duration-300 lg:text-[14px] ${
-                isMyList
-                  ? "text-white"
-                  : "text-white/50 hover:text-white"
-              }`}
-            >
-              My List
-            </button>
           </nav>
 
-          <div className="ml-auto flex items-center gap-1 sm:gap-2.5">
+          {/* RIGHT SIDE */}
 
+          <div className="ml-auto flex items-center gap-2.5">
             {/* NOTIFICATION */}
 
             <div className="relative">
@@ -390,18 +449,18 @@ export default function StreamingLayout({ children }) {
                 onClick={(event) => {
                   event.stopPropagation();
 
-                  setNoticeOpen((current) => !current);
+                  setNoticeOpen(
+                    (current) => !current,
+                  );
+
                   setProfileOpen(false);
                   setMobileMenuOpen(false);
                 }}
-                className="relative grid h-9 w-9 place-items-center rounded-full text-white/65 transition hover:bg-white/[0.05] hover:text-white sm:h-10 sm:w-10"
+                className="relative grid h-10 w-10 place-items-center rounded-full text-white/65 transition hover:bg-white/[0.05] hover:text-white"
               >
-                <Icon
-                  name="bell"
-                  className="h-[18px] w-[18px]"
-                />
+                <Icon name="bell" />
 
-                <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-fuchsia-400 sm:right-2 sm:top-2" />
+                <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-fuchsia-400" />
               </button>
 
               {noticeOpen && (
@@ -409,15 +468,28 @@ export default function StreamingLayout({ children }) {
                   onClick={(event) =>
                     event.stopPropagation()
                   }
-                  className="absolute right-0 top-11 w-[min(18rem,calc(100vw-2rem))] rounded-2xl border border-violet-300/[0.1] bg-[#100a18]/95 p-4 shadow-[0_25px_80px_rgba(0,0,0,0.65)] backdrop-blur-2xl sm:top-12 sm:w-72"
+                  className="absolute right-0 top-12 w-72 overflow-hidden rounded-2xl border border-violet-300/[0.1] bg-[#100a18]/92 shadow-[0_25px_80px_rgba(0,0,0,0.65)] backdrop-blur-2xl"
                 >
-                  <p className="text-sm font-semibold">
-                    New arrivals
-                  </p>
+                  <div className="border-b border-white/[0.07] p-4">
+                    <p className="text-sm font-semibold">
+                      New arrivals
+                    </p>
 
-                  <p className="mt-1 text-[11px] leading-5 text-white/40">
-                    Fresh titles have been added to STREAM.
-                  </p>
+                    <p className="mt-1 text-[11px] leading-5 text-white/40">
+                      Fresh titles have been added to
+                      STREAM.
+                    </p>
+                  </div>
+
+                  <div className="p-4">
+                    <p className="text-sm font-semibold">
+                      Picks for {activeName}
+                    </p>
+
+                    <p className="mt-1 text-[11px] leading-5 text-white/40">
+                      New recommendations are ready.
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
@@ -431,15 +503,15 @@ export default function StreamingLayout({ children }) {
                   event.stopPropagation();
 
                   setProfileOpen(
-                    (current) => !current
+                    (current) => !current,
                   );
 
                   setNoticeOpen(false);
                   setMobileMenuOpen(false);
                 }}
-                className="flex items-center gap-2 rounded-full p-1 transition hover:bg-white/[0.05] sm:pr-2.5"
+                className="flex items-center gap-2.5 rounded-full p-1 pr-2.5 transition hover:bg-white/[0.05]"
               >
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 text-[10px] font-semibold">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 text-[10px] font-semibold text-white">
                   {activeName
                     ?.charAt(0)
                     ?.toUpperCase()}
@@ -450,7 +522,7 @@ export default function StreamingLayout({ children }) {
                 </span>
 
                 <span
-                  className={`hidden text-[7px] text-white/35 transition-transform sm:block ${
+                  className={`text-[7px] text-white/35 transition-transform duration-300 ${
                     profileOpen ? "rotate-180" : ""
                   }`}
                 >
@@ -463,7 +535,7 @@ export default function StreamingLayout({ children }) {
                   onClick={(event) =>
                     event.stopPropagation()
                   }
-                  className="absolute right-0 top-11 w-52 overflow-hidden rounded-2xl border border-violet-300/[0.1] bg-[#100a18]/95 py-2 text-xs shadow-[0_25px_80px_rgba(0,0,0,0.65)] backdrop-blur-2xl sm:top-12"
+                  className="absolute right-0 top-12 w-52 overflow-hidden rounded-2xl border border-violet-300/[0.1] bg-[#100a18]/92 py-2 text-xs shadow-[0_25px_80px_rgba(0,0,0,0.65)] backdrop-blur-2xl"
                 >
                   <div className="border-b border-white/[0.07] px-4 py-3">
                     <p className="font-semibold">
@@ -478,7 +550,7 @@ export default function StreamingLayout({ children }) {
                   <button
                     type="button"
                     onClick={() =>
-                      navigate("/whos-watching")
+                      navigateTo("/whos-watching")
                     }
                     className="block w-full px-4 py-2.5 text-left text-white/60 hover:bg-violet-400/[0.08] hover:text-white"
                   >
@@ -488,7 +560,7 @@ export default function StreamingLayout({ children }) {
                   <button
                     type="button"
                     onClick={() =>
-                      navigate("/settings")
+                      navigateTo("/settings")
                     }
                     className="block w-full px-4 py-2.5 text-left text-white/60 hover:bg-violet-400/[0.08] hover:text-white"
                   >
@@ -511,17 +583,17 @@ export default function StreamingLayout({ children }) {
         </div>
       </header>
 
-      {/* =====================================
+      {/* =====================================================
           PAGE CONTENT
-      ====================================== */}
+      ====================================================== */}
 
       <div className="pb-[82px] lg:ml-[72px] lg:pb-0">
         {children}
       </div>
 
-      {/* =====================================
-          MOBILE MORE OVERLAY
-      ====================================== */}
+      {/* =====================================================
+          MOBILE MORE MENU
+      ====================================================== */}
 
       {mobileMenuOpen && (
         <div
@@ -532,10 +604,8 @@ export default function StreamingLayout({ children }) {
             onClick={(event) =>
               event.stopPropagation()
             }
-            className="absolute bottom-[72px] left-3 right-3 overflow-hidden rounded-[24px] border border-violet-300/[0.10] bg-[#100a18]/98 p-3 shadow-[0_-20px_80px_rgba(0,0,0,0.7)] backdrop-blur-2xl"
+            className="absolute bottom-[78px] left-3 right-3 overflow-hidden rounded-[24px] border border-violet-300/[0.10] bg-[#100a18]/98 p-3 shadow-[0_-20px_80px_rgba(0,0,0,0.7)] backdrop-blur-2xl"
           >
-            {/* MENU HEADER */}
-
             <div className="flex items-center justify-between border-b border-white/[0.06] px-3 pb-3 pt-1">
               <div>
                 <p
@@ -603,12 +673,11 @@ export default function StreamingLayout({ children }) {
         </div>
       )}
 
-      {/* =====================================
+      {/* =====================================================
           MOBILE BOTTOM NAVIGATION
-      ====================================== */}
+      ====================================================== */}
 
       <nav className="fixed bottom-0 left-0 right-0 z-[90] flex h-[70px] items-stretch border-t border-violet-300/[0.08] bg-[#09070d]/95 px-2 pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_40px_rgba(0,0,0,0.35)] backdrop-blur-2xl lg:hidden">
-
         <MobileNavItem
           icon="home"
           label="Home"
@@ -652,7 +721,7 @@ export default function StreamingLayout({ children }) {
             setProfileOpen(false);
 
             setMobileMenuOpen(
-              (current) => !current
+              (current) => !current,
             );
           }}
         />
