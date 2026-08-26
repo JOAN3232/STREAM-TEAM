@@ -20,13 +20,18 @@ export default function Hero() {
         const movies = await getTrendingMovies();
 
         const movieBackgrounds = movies
-          .filter((movie) => movie.backdrop_path)
+          .filter((movie) => movie.backdropUrl || movie.backdrop_path)
           .slice(0, 7)
-          .map((movie) => ({
-            id: movie.id,
-            image: getBackdropUrl(movie.backdrop_path),
-            title: movie.title || movie.name || "Movie",
-          }));
+          .map((movie) => {
+            const backdrop =
+              movie.backdropUrl || movie.backdrop_path;
+
+            return {
+              id: movie.id,
+              image: getBackdropUrl(backdrop),
+              title: movie.title || movie.name || "Movie",
+            };
+          });
 
         setBackgrounds(movieBackgrounds);
       } catch (error) {
@@ -106,8 +111,11 @@ export default function Hero() {
       )}
 
       <div className="absolute inset-0 bg-black/35" />
+
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(124,58,237,0.18),transparent_62%)]" />
+
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-[#050505]/90" />
+
       <div className="absolute inset-0 bg-gradient-to-r from-black/30 via-transparent to-black/30" />
 
       <div className="relative z-10 mx-auto flex min-h-screen max-w-5xl flex-col items-center justify-center px-6 pb-20 pt-28 text-center">
