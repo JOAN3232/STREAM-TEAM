@@ -11,7 +11,9 @@ import {
 } from "react-router-dom";
 
 import {
+  getBackdropUrl,
   getMediaDetails,
+  getPosterUrl,
 } from "../services/tmdbService";
 
 import {
@@ -56,10 +58,6 @@ export default function Player() {
   const isMovie =
     mediaType === "movie";
 
-  /* ======================================
-     ACTIVE PROFILE
-  ======================================= */
-
   const activeProfile = useMemo(() => {
     try {
       return JSON.parse(
@@ -79,10 +77,6 @@ export default function Player() {
 
   const continueWatchingKey =
     `stream_continue_watching_${profileId}`;
-
-  /* ======================================
-     LOCAL CONTINUE WATCHING
-  ======================================= */
 
   const getLocalContinueWatching = () => {
     try {
@@ -293,10 +287,6 @@ export default function Player() {
       }
     };
 
-  /* ======================================
-     FIND YOUTUBE TRAILER
-  ======================================= */
-
   const findTrailer = (details) => {
     const youtubeVideos =
       details?.videos?.results?.filter(
@@ -324,10 +314,6 @@ export default function Player() {
     );
   };
 
-  /* ======================================
-     LOAD CONTENT
-  ======================================= */
-
   useEffect(() => {
     let cancelled = false;
 
@@ -344,10 +330,6 @@ export default function Player() {
         vidSrcSavedRef.current = "";
         resumeTimeRef.current = 0;
         lastSavedSecondRef.current = -1;
-
-        /* ==================================
-           NATIVE / CHARADE CONTENT
-        ================================== */
 
         if (isPlayable) {
           const playable =
@@ -375,10 +357,6 @@ export default function Player() {
           return;
         }
 
-        /* ==================================
-           TMDB DETAILS
-        ================================== */
-
         const details =
           await getMediaDetails(
             mediaType,
@@ -389,10 +367,6 @@ export default function Player() {
 
         setMovie(details);
 
-        /* ==================================
-           PREPARE YOUTUBE FALLBACK FIRST
-        ================================== */
-
         const trailer =
           findTrailer(details);
 
@@ -401,10 +375,6 @@ export default function Player() {
             trailer.key
           );
         }
-
-        /* ==================================
-           MOVIES → VIDSRC
-        ================================== */
 
         if (isMovie) {
           try {
@@ -435,10 +405,6 @@ export default function Player() {
               !cancelled &&
               trailer
             ) {
-              /*
-               * No VidSrc URL returned.
-               * Automatically use trailer.
-               */
               setUseTrailer(true);
             }
           } catch (playbackError) {
@@ -447,10 +413,6 @@ export default function Player() {
               playbackError
             );
 
-            /*
-             * VidSrc request failed.
-             * Automatically switch to YouTube.
-             */
             if (
               !cancelled &&
               trailer
@@ -459,10 +421,6 @@ export default function Player() {
             }
           }
         } else {
-          /*
-           * TV isn't wired to VidSrc yet,
-           * so continue using trailer.
-           */
           if (trailer) {
             setUseTrailer(true);
           }
@@ -506,10 +464,6 @@ export default function Player() {
     isPlayable,
     isMovie,
   ]);
-
-  /* ======================================
-     LOAD NATIVE CONTINUE WATCHING
-  ======================================= */
 
   useEffect(() => {
     if (!movie || !isPlayable) {
@@ -603,10 +557,6 @@ export default function Player() {
     continueWatchingKey,
   ]);
 
-  /* ======================================
-     SAVE NATIVE PROGRESS
-  ======================================= */
-
   const saveProgress = async (
     progress,
     currentTime = 0
@@ -666,10 +616,6 @@ export default function Player() {
     }
   };
 
-  /* ======================================
-     SAVE VIDSRC TO CONTINUE WATCHING
-  ======================================= */
-
   useEffect(() => {
     if (
       isPlayable ||
@@ -708,15 +654,25 @@ export default function Player() {
       movie.description ||
       "";
 
-    const posterUrl =
+    const rawPoster =
       movie.posterUrl ||
       movie.poster_path ||
       "";
 
-    const backdropUrl =
+    const rawBackdrop =
       movie.backdropUrl ||
       movie.backdrop_path ||
       "";
+
+    const posterUrl =
+      rawPoster
+        ? getPosterUrl(rawPoster)
+        : "";
+
+    const backdropUrl =
+      rawBackdrop
+        ? getBackdropUrl(rawBackdrop)
+        : "";
 
     const releaseDate =
       movie.release_date ||
@@ -731,18 +687,11 @@ export default function Player() {
           ).slice(0, 4)
         : "";
 
-    /*
-     * VidSrc runs in a cross-origin iframe,
-     * therefore exact currentTime cannot
-     * reliably be read by this page.
-     */
     const progress = 1;
     const currentTime = 0;
 
     const saveVidSrcMovie =
       async () => {
-        /* LOCAL CACHE */
-
         try {
           const current =
             getLocalContinueWatching();
@@ -807,8 +756,6 @@ export default function Player() {
           );
         }
 
-        /* MONGODB */
-
         try {
           await saveContinueWatchingToBackend({
             contentId,
@@ -841,10 +788,6 @@ export default function Player() {
     isPlayable,
     continueWatchingKey,
   ]);
-
-  /* ======================================
-     NATIVE VIDEO EVENTS
-  ======================================= */
 
   const handleLoadedMetadata = () => {
     const video =
@@ -943,10 +886,6 @@ export default function Player() {
     resumeTimeRef.current = 0;
   };
 
-  /* ======================================
-     SAVE NATIVE BEFORE CLOSE
-  ======================================= */
-
   useEffect(() => {
     return () => {
       const video =
@@ -979,10 +918,6 @@ export default function Player() {
     movie,
   ]);
 
-  /* ======================================
-     LOADING
-  ======================================= */
-
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-black text-white">
@@ -996,10 +931,6 @@ export default function Player() {
       </main>
     );
   }
-
-  /* ======================================
-     ERROR
-  ======================================= */
 
   if (
     !movie ||
@@ -1056,10 +987,6 @@ export default function Player() {
   return (
     <main className="relative min-h-screen overflow-hidden bg-black text-white">
 
-      {/* ======================================
-          NATIVE STREAM PLAYER
-      ======================================= */}
-
       {isPlayable &&
         videoUrl && (
           <video
@@ -1088,10 +1015,6 @@ export default function Player() {
           </video>
         )}
 
-      {/* ======================================
-          VIDSRC PLAYER
-      ======================================= */}
-
       {showingVidSrc && (
         <iframe
           src={embedUrl}
@@ -1102,15 +1025,10 @@ export default function Player() {
           } playback`}
           allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
           allowFullScreen
-          sandbox="allow-scripts allow-same-origin allow-presentation"
           referrerPolicy="origin"
           className="absolute inset-0 h-full w-full border-0 bg-black"
         />
       )}
-
-      {/* ======================================
-          YOUTUBE FALLBACK
-      ======================================= */}
 
       {showingTrailer && (
         <iframe
@@ -1126,10 +1044,6 @@ export default function Player() {
           className="absolute inset-0 h-full w-full border-0 bg-black"
         />
       )}
-
-      {/* ======================================
-          NOTHING AVAILABLE
-      ======================================= */}
 
       {!isPlayable &&
         !showingVidSrc &&
@@ -1172,15 +1086,7 @@ export default function Player() {
           </div>
         )}
 
-      {/* ======================================
-          TOP FADE
-      ======================================= */}
-
       <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-28 bg-gradient-to-b from-black/80 to-transparent" />
-
-      {/* ======================================
-          BACK BUTTON
-      ======================================= */}
 
       <button
         type="button"
@@ -1193,10 +1099,6 @@ export default function Player() {
         ←
       </button>
 
-      {/* ======================================
-          MOVIE / TRAILER SWITCH
-      ======================================= */}
-
       {!isPlayable &&
         embedUrl &&
         trailerKey && (
@@ -1204,21 +1106,16 @@ export default function Player() {
             type="button"
             onClick={() =>
               setUseTrailer(
-                (current) =>
-                  !current
+                (current) => !current
               )
             }
-            className="absolute bottom-6 right-6 z-40 rounded-xl border border-white/15 bg-black/75 px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-white/80 shadow-xl backdrop-blur-xl transition hover:border-violet-400/50 hover:bg-violet-500/20 hover:text-white"
+            className="absolute right-5 top-20 z-40 rounded-full border border-white/10 bg-black/55 px-3 py-2 text-[9px] font-semibold uppercase tracking-[0.08em] text-white/65 backdrop-blur-xl transition hover:border-violet-400/40 hover:bg-violet-500/15 hover:text-white"
           >
             {useTrailer
-              ? "← Watch Movie"
-              : "Playback unavailable? Watch Trailer"}
+              ? "Watch Movie"
+              : "Trailer"}
           </button>
         )}
-
-      {/* ======================================
-          CONTENT INFO
-      ======================================= */}
 
       <div className="pointer-events-none absolute left-[80px] top-5 z-30 hidden sm:block">
 
@@ -1315,10 +1212,6 @@ export default function Player() {
         </div>
 
       </div>
-
-      {/* ======================================
-          STREAM LOGO
-      ======================================= */}
 
       <div className="pointer-events-none absolute right-6 top-6 z-30">
         <span
