@@ -10,13 +10,6 @@ const options = {
   },
 };
 
-/*
- * Converts Movie Service responses into the same structure
- * the existing STREAM frontend expects from TMDB.
- *
- * This lets us use the API Gateway without rewriting
- * Hero, Login, Who's Watching, etc.
- */
 const normalizeGatewayMovie = (movie) => ({
   ...movie,
 
@@ -35,7 +28,6 @@ const normalizeGatewayMovie = (movie) => ({
     movie.mediaType ||
     "movie",
 
-  // Keep the Movie Service fields as well.
   posterUrl:
     movie.posterUrl ||
     movie.poster_path ||
@@ -52,17 +44,10 @@ const normalizeGatewayMovie = (movie) => ({
     "movie",
 });
 
-/*
- * TRENDING MOVIES
- *
- * React
- *   ↓
- * API Gateway
- *   ↓
- * Movie Service
- *   ↓
- * TMDB
- */
+/* =========================================================
+   TRENDING THROUGH API GATEWAY
+   ========================================================= */
+
 export const getTrendingMovies = async () => {
   const response = await fetch(
     `${GATEWAY_URL}/api/movies/trending`
@@ -83,12 +68,10 @@ export const getTrendingMovies = async () => {
   return movies.map(normalizeGatewayMovie);
 };
 
-/*
- * MOVIE DETAILS
- *
- * Temporarily still uses TMDB directly until the
- * complete frontend is migrated to Movie Service.
- */
+/* =========================================================
+   MOVIE DETAILS
+   ========================================================= */
+
 export const getMovieDetails = async (movieId) => {
   const response = await fetch(
     `${BASE_URL}/movie/${movieId}?language=en-US&append_to_response=credits,videos`,
@@ -102,9 +85,10 @@ export const getMovieDetails = async (movieId) => {
   return response.json();
 };
 
-/*
- * MOVIE RECOMMENDATIONS
- */
+/* =========================================================
+   MOVIE RECOMMENDATIONS
+   ========================================================= */
+
 export const getMovieRecommendations = async (movieId) => {
   const response = await fetch(
     `${BASE_URL}/movie/${movieId}/recommendations?language=en-US&page=1`,
@@ -120,17 +104,10 @@ export const getMovieRecommendations = async (movieId) => {
   return data.results || [];
 };
 
-/*
- * IMAGE HELPERS
- *
- * These support BOTH:
- *
- * /abc123.jpg
- *
- * and
- *
- * https://image.tmdb.org/t/p/original/abc123.jpg
- */
+/* =========================================================
+   IMAGE HELPERS
+   ========================================================= */
+
 export const getPosterUrl = (posterPath) => {
   if (!posterPath) {
     return null;
@@ -161,12 +138,10 @@ export const getBackdropUrl = (backdropPath) => {
   return `https://image.tmdb.org/t/p/original${backdropPath}`;
 };
 
-/*
- * GENERIC TMDB FETCH
- *
- * Temporarily retained for Browse categories that
- * Movie Service does not yet expose.
- */
+/* =========================================================
+   GENERIC TMDB FETCH
+   ========================================================= */
+
 const fetchResults = async (path) => {
   const response = await fetch(
     `${BASE_URL}${path}`,
@@ -184,97 +159,272 @@ const fetchResults = async (path) => {
   return data.results || [];
 };
 
-const withMediaType = (items, mediaType) =>
+/* =========================================================
+   REMOVE DUPLICATES
+   ========================================================= */
+
+const dedupeByMediaAndId = (items) => {
+  const seen = new Set();
+
+  return items.filter((item) => {
+    if (!item?.id) {
+      return false;
+    }
+
+    const mediaType =
+      item.media_type ||
+      (item.first_air_date || item.name
+        ? "tv"
+        : "movie");
+
+    const key = `${mediaType}:${item.id}`;
+
+    if (seen.has(key)) {
+      return false;
+    }
+
+    seen.add(key);
+
+    return true;
+  });
+};
+
+/* =========================================================
+   MULTIPLE TMDB PAGES
+
+   TMDB normally returns 20 titles per page.
+
+   3 pages = up to 60 titles
+   5 pages = up to 100 titles
+   ========================================================= */
+
+const fetchMultiplePages = async (
+  basePath,
+  pages = 3
+) => {
+  const requests = Array.from(
+    { length: pages },
+    (_, index) => {
+      const page = index + 1;
+
+      const separator =
+        basePath.includes("?")
+          ? "&"
+          : "?";
+
+      return fetchResults(
+        `${basePath}${separator}page=${page}`
+      );
+    }
+  );
+
+  const settled =
+    await Promise.allSettled(requests);
+
+  const combined = settled.flatMap(
+    (result) =>
+      result.status === "fulfilled"
+        ? result.value
+        : []
+  );
+
+  return dedupeByMediaAndId(combined);
+};
+
+/* =========================================================
+   MEDIA TYPE HELPER
+   ========================================================= */
+
+const withMediaType = (
+  items,
+  mediaType
+) =>
   items.map((item) => ({
     ...item,
+
     media_type:
-      item.media_type || mediaType,
+      item.media_type ||
+      mediaType,
   }));
 
-/*
- * BROWSE CONTENT
- *
- * These remain direct TMDB requests temporarily.
- * This protects the existing Browse page while
- * Gateway integration is introduced gradually.
- */
+/* =========================================================
+   BROWSE CONTENT
+
+   We now fetch MULTIPLE pages instead of only page 1.
+   ========================================================= */
+
 export const getBrowseContent = async () => {
   const requests = [
-    [
-      "trending",
-      "/trending/all/week?language=en-US",
-      null,
-    ],
+    {
+      key: "trending",
+      path:
+        "/trending/all/week?language=en-US",
+      mediaType: null,
+      pages: 3,
+    },
 
-    [
-      "popular",
-      "/movie/popular?language=en-US&page=1",
-      "movie",
-    ],
+    {
+      key: "popular",
+      path:
+        "/movie/popular?language=en-US",
+      mediaType: "movie",
+      pages: 5,
+    },
 
-    [
-      "topRated",
-      "/movie/top_rated?language=en-US&page=1",
-      "movie",
-    ],
+    {
+      key: "topRated",
+      path:
+        "/movie/top_rated?language=en-US",
+      mediaType: "movie",
+      pages: 3,
+    },
 
-    [
-      "movies",
-      "/movie/now_playing?language=en-US&page=1",
-      "movie",
-    ],
+    {
+      key: "movies",
+      path:
+        "/movie/now_playing?language=en-US",
+      mediaType: "movie",
+      pages: 3,
+    },
 
-    [
-      "tv",
-      "/tv/popular?language=en-US&page=1",
-      "tv",
-    ],
+    {
+      key: "tv",
+      path:
+        "/tv/popular?language=en-US",
+      mediaType: "tv",
+      pages: 5,
+    },
 
-    [
-      "action",
-      "/discover/movie?language=en-US&sort_by=popularity.desc&with_genres=28",
-      "movie",
-    ],
+    {
+      key: "topRatedTv",
+      path:
+        "/tv/top_rated?language=en-US",
+      mediaType: "tv",
+      pages: 3,
+    },
 
-    [
-      "comedy",
-      "/discover/movie?language=en-US&sort_by=popularity.desc&with_genres=35",
-      "movie",
-    ],
+    {
+      key: "airingToday",
+      path:
+        "/tv/airing_today?language=en-US",
+      mediaType: "tv",
+      pages: 3,
+    },
 
-    [
-      "drama",
-      "/discover/movie?language=en-US&sort_by=popularity.desc&with_genres=18",
-      "movie",
-    ],
+    {
+      key: "action",
+      path:
+        "/discover/movie?language=en-US&sort_by=popularity.desc&with_genres=28",
+      mediaType: "movie",
+      pages: 3,
+    },
+
+    {
+      key: "comedy",
+      path:
+        "/discover/movie?language=en-US&sort_by=popularity.desc&with_genres=35",
+      mediaType: "movie",
+      pages: 3,
+    },
+
+    {
+      key: "drama",
+      path:
+        "/discover/movie?language=en-US&sort_by=popularity.desc&with_genres=18",
+      mediaType: "movie",
+      pages: 3,
+    },
+
+    {
+      key: "horror",
+      path:
+        "/discover/movie?language=en-US&sort_by=popularity.desc&with_genres=27",
+      mediaType: "movie",
+      pages: 3,
+    },
+
+    {
+      key: "romance",
+      path:
+        "/discover/movie?language=en-US&sort_by=popularity.desc&with_genres=10749",
+      mediaType: "movie",
+      pages: 3,
+    },
+
+    {
+      key: "scifi",
+      path:
+        "/discover/movie?language=en-US&sort_by=popularity.desc&with_genres=878",
+      mediaType: "movie",
+      pages: 3,
+    },
+
+    {
+      key: "animation",
+      path:
+        "/discover/movie?language=en-US&sort_by=popularity.desc&with_genres=16",
+      mediaType: "movie",
+      pages: 3,
+    },
+
+    {
+      key: "thriller",
+      path:
+        "/discover/movie?language=en-US&sort_by=popularity.desc&with_genres=53",
+      mediaType: "movie",
+      pages: 3,
+    },
+
+    {
+      key: "documentary",
+      path:
+        "/discover/movie?language=en-US&sort_by=popularity.desc&with_genres=99",
+      mediaType: "movie",
+      pages: 2,
+    },
   ];
 
-  const settled = await Promise.allSettled(
-    requests.map(([, path]) =>
-      fetchResults(path)
-    )
-  );
+  const settled =
+    await Promise.allSettled(
+      requests.map((request) =>
+        fetchMultiplePages(
+          request.path,
+          request.pages
+        )
+      )
+    );
 
   return requests.reduce(
     (
       content,
-      [key, , mediaType],
+      request,
       index
     ) => {
       if (
         settled[index].status ===
         "fulfilled"
       ) {
-        content[key] = withMediaType(
-          settled[index].value,
-          mediaType
-        ).filter(
-          (item) =>
-            item.backdrop_path ||
-            item.poster_path
-        );
+        const typed =
+          withMediaType(
+            settled[index].value,
+            request.mediaType
+          );
+
+        content[request.key] =
+          dedupeByMediaAndId(
+            typed
+          ).filter(
+            (item) =>
+              item.backdrop_path ||
+              item.poster_path
+          );
       } else {
-        content[key] = [];
+        console.error(
+          `Failed to load ${request.key}:`,
+          settled[index].reason
+        );
+
+        content[request.key] = [];
       }
 
       return content;
@@ -283,9 +433,10 @@ export const getBrowseContent = async () => {
   );
 };
 
-/*
- * MOVIE / TV DETAILS
- */
+/* =========================================================
+   MOVIE / TV DETAILS
+   ========================================================= */
+
 export const getMediaDetails = async (
   mediaType,
   id
@@ -314,9 +465,10 @@ export const getMediaDetails = async (
   };
 };
 
-/*
- * MOVIE / TV RECOMMENDATIONS
- */
+/* =========================================================
+   MOVIE / TV RECOMMENDATIONS
+   ========================================================= */
+
 export const getMediaRecommendations = async (
   mediaType,
   id
@@ -326,9 +478,10 @@ export const getMediaRecommendations = async (
       ? "tv"
       : "movie";
 
-  const results = await fetchResults(
-    `/${type}/${id}/recommendations?language=en-US&page=1`
-  );
+  const results =
+    await fetchResults(
+      `/${type}/${id}/recommendations?language=en-US&page=1`
+    );
 
   return withMediaType(
     results,
