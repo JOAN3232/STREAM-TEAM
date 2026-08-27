@@ -36,6 +36,7 @@ export default function MovieDetails() {
   const [episodes, setEpisodes] = useState([]);
   const [episodesLoading, setEpisodesLoading] = useState(false);
   const [episodesError, setEpisodesError] = useState("");
+  const [resumeEpisode, setResumeEpisode] = useState(null);
 
   const isTV = mediaType === "tv";
 
@@ -51,6 +52,7 @@ export default function MovieDetails() {
 
   const activeProfileId = storedProfile?.id || storedProfile?.name || "default";
   const myListKey = `stream_my_list_${activeProfileId}`;
+  const continueWatchingKey = `stream_continue_watching_${activeProfileId}`;
 
   useEffect(() => {
     const loadMovie = async () => {
@@ -136,6 +138,38 @@ export default function MovieDetails() {
       cancelled = true;
     };
   }, [id, isTV, selectedSeason]);
+
+  useEffect(() => {
+    if (!isTV || !id) {
+      setResumeEpisode(null);
+      return;
+    }
+
+    try {
+      const saved =
+        JSON.parse(localStorage.getItem(continueWatchingKey)) || [];
+
+      const existing = saved.find(
+        (item) =>
+          String(item.id || item.contentId) === String(id) &&
+          item.mediaType === "tv" &&
+          Number(item.season) > 0 &&
+          Number(item.episode) > 0
+      );
+
+      if (existing) {
+        setResumeEpisode({
+          season: Number(existing.season),
+          episode: Number(existing.episode),
+          episodeName: existing.episodeName || "",
+        });
+      } else {
+        setResumeEpisode(null);
+      }
+    } catch {
+      setResumeEpisode(null);
+    }
+  }, [id, isTV, continueWatchingKey]);
 
   useEffect(() => {
     const checkMyList = async () => {
@@ -247,6 +281,14 @@ export default function MovieDetails() {
     );
   };
 
+  const resumeTVEpisode = () => {
+    if (!resumeEpisode || !movie) return;
+
+    navigate(
+      `/watch/tv/${movie.id}?season=${resumeEpisode.season}&episode=${resumeEpisode.episode}`
+    );
+  };
+
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#06050a] text-white">
@@ -341,14 +383,27 @@ export default function MovieDetails() {
             <div className="mt-7 flex flex-wrap items-center gap-3">
               <button
                 type="button"
-                onClick={() =>
-                  isTV
-                    ? playTVEpisode(episodes?.[0]?.episode_number || 1)
-                    : navigate(`/watch/${mediaType}/${movie.id}`)
-                }
+                onClick={() => {
+                  if (isTV && resumeEpisode) {
+                    resumeTVEpisode();
+                    return;
+                  }
+
+                  if (isTV) {
+                    playTVEpisode(episodes?.[0]?.episode_number || 1);
+                    return;
+                  }
+
+                  navigate(`/watch/${mediaType}/${movie.id}`);
+                }}
                 className="flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-black transition hover:bg-white/85"
               >
-                ▶ {isTV ? "Play Episode" : "Play"}
+                ▶{" "}
+                {isTV && resumeEpisode
+                  ? `Resume S${resumeEpisode.season}:E${resumeEpisode.episode}`
+                  : isTV
+                    ? "Play Episode"
+                    : "Play"}
               </button>
 
               <button
@@ -522,6 +577,13 @@ export default function MovieDetails() {
                       <div className="flex items-start justify-between gap-3">
                         <h3 className="truncate text-[12px] font-semibold text-white/80 transition group-hover:text-white sm:text-[13px]">
                           {episode.name || `Episode ${episode.episode_number}`}
+                          {resumeEpisode &&
+                            resumeEpisode.season === selectedSeason &&
+                            resumeEpisode.episode === episode.episode_number && (
+                              <span className="ml-2 text-[8px] font-semibold uppercase tracking-[0.16em] text-violet-300">
+                                Resume
+                              </span>
+                            )}
                         </h3>
 
                         {episode.runtime && (

@@ -457,6 +457,13 @@ export default function Player() {
           release_date: releaseDate || year,
           progress,
           currentTime,
+          ...(isTV
+            ? {
+                season: seasonNumber,
+                episode: episodeNumber,
+                episodeName: episodeInfo?.name || "",
+              }
+            : {}),
           watchedAt: Date.now(),
         };
 
