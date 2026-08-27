@@ -319,6 +319,7 @@ function MobileMenuItem({
 /* =========================================================
    CONTINUE WATCHING ROW
 ========================================================= */
+
 function ContinueWatchingRow({
   items,
   navigate,
@@ -332,19 +333,14 @@ function ContinueWatchingRow({
 
   const scroll = (direction) => {
     rail.current?.scrollBy({
-      left:
-        rail.current.clientWidth *
-        0.78 *
-        direction,
+      left: rail.current.clientWidth * 0.78 * direction,
       behavior: "smooth",
     });
   };
 
   return (
     <section className="group/continue relative mb-16 lg:mb-[72px]">
-
       <div className="mb-6 flex items-center gap-2 px-7 sm:px-9 lg:px-12 xl:px-14">
-
         <h2 className="text-[17px] font-semibold tracking-[-0.02em] text-white/90 lg:text-[18px]">
           Continue Watching
         </h2>
@@ -353,22 +349,15 @@ function ContinueWatchingRow({
           name="chevronRight"
           className="h-3.5 w-3.5 text-violet-400/80"
         />
-
       </div>
 
       <div className="relative">
-
         <button
           type="button"
-          onClick={() =>
-            scroll(-1)
-          }
+          onClick={() => scroll(-1)}
           className="absolute left-4 top-[122px] z-40 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/[0.08] bg-[#0b0910]/80 text-white/60 opacity-0 shadow-xl backdrop-blur-xl transition-all duration-200 hover:bg-violet-500/25 hover:text-white group-hover/continue:opacity-100 lg:flex"
         >
-          <Icon
-            name="chevronLeft"
-            className="h-4 w-4"
-          />
+          <Icon name="chevronLeft" className="h-4 w-4" />
         </button>
 
         <div
@@ -376,55 +365,33 @@ function ContinueWatchingRow({
           className="flex gap-5 overflow-x-auto px-7 pb-6 sm:px-9 lg:px-12 xl:px-14 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {items.map((item) => {
+            const isExactProgress = typeOf(item) === "playable";
 
-            const isExactProgress =
-              typeOf(item) ===
-              "playable";
-
-            const progress =
-              isExactProgress
-                ? Math.min(
-                    Math.max(
-                      Number(
-                        item.progress
-                      ) || 0,
-                      0
-                    ),
-                    100
-                  )
-                : 0;
+            const progress = isExactProgress
+              ? Math.min(
+                  Math.max(Number(item.progress) || 0, 0),
+                  100,
+                )
+              : 0;
 
             const rawBackdrop =
-              item.backdropUrl ||
-              item.backdrop_path ||
-              "";
+              item.backdropUrl || item.backdrop_path || "";
 
             const rawPoster =
-              item.posterUrl ||
-              item.poster_path ||
-              "";
+              item.posterUrl || item.poster_path || "";
 
-            const imageUrl =
-              rawBackdrop
-                ? getBackdropUrl(
-                    rawBackdrop
-                  )
-                : rawPoster
-                  ? getPosterUrl(
-                      rawPoster
-                    )
-                  : "";
+            const imageUrl = rawBackdrop
+              ? getBackdropUrl(rawBackdrop)
+              : rawPoster
+                ? getPosterUrl(rawPoster)
+                : "";
 
             return (
               <article
-                key={`${typeOf(
-                  item
-                )}-${item.id}`}
+                key={`${typeOf(item)}-${item.id}`}
                 className="group/card w-[280px] shrink-0"
               >
-
                 <div className="relative aspect-video overflow-hidden rounded-[12px] border border-white/[0.07] bg-[#0b0a0e] shadow-[0_18px_45px_rgba(0,0,0,0.35)] transition duration-300 group-hover/card:-translate-y-1 group-hover/card:border-violet-400/30 group-hover/card:shadow-[0_22px_55px_rgba(0,0,0,0.6)]">
-
                   {imageUrl ? (
                     <img
                       src={imageUrl}
@@ -433,16 +400,12 @@ function ContinueWatchingRow({
                     />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#21152f] via-[#100b17] to-black">
-
                       <span
                         className="px-5 text-center text-3xl font-semibold text-white"
-                        style={
-                          DISPLAY_FONT
-                        }
+                        style={DISPLAY_FONT}
                       >
                         {titleOf(item)}
                       </span>
-
                     </div>
                   )}
 
@@ -451,70 +414,49 @@ function ContinueWatchingRow({
                   <button
                     type="button"
                     onClick={() =>
-                      navigate(
-                        `/watch/${typeOf(
-                          item
-                        )}/${item.id}`
-                      )
+                      navigate(`/watch/${typeOf(item)}/${item.id}`)
                     }
                     className="absolute left-1/2 top-1/2 flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/50 text-white opacity-0 shadow-xl backdrop-blur-md transition duration-300 hover:scale-110 hover:bg-white hover:text-black group-hover/card:opacity-100"
                   >
-                    <Icon
-                      name="play"
-                      className="h-4 w-4"
-                    />
+                    <Icon name="play" className="h-4 w-4" />
                   </button>
 
                   <button
                     type="button"
                     title="Remove from Continue Watching"
-                    onClick={() =>
-                      onRemove(item)
-                    }
+                    onClick={() => onRemove(item)}
                     className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-black/55 text-[14px] text-white/50 opacity-0 backdrop-blur-md transition hover:bg-red-400/20 hover:text-red-200 group-hover/card:opacity-100"
                   >
                     ×
                   </button>
 
                   <div className="absolute inset-x-0 bottom-[10px] px-3">
-
                     <p className="truncate text-[11px] font-semibold text-white">
                       {titleOf(item)}
                     </p>
 
                     <div className="mt-2 flex items-center justify-between text-[8px] text-white/45">
-
-                      <span>
-                        Continue watching
-                      </span>
+                      <span>Continue watching</span>
 
                       <span>
                         {isExactProgress
-                          ? `${Math.round(
-                              progress
-                            )}%`
+                          ? `${Math.round(progress)}%`
                           : "Started"}
                       </span>
-
                     </div>
-
                   </div>
 
                   {isExactProgress && (
                     <div className="absolute inset-x-0 bottom-0 h-[4px] bg-white/15">
-
                       <div
                         className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all duration-500"
                         style={{
                           width: `${progress}%`,
                         }}
                       />
-
                     </div>
                   )}
-
                 </div>
-
               </article>
             );
           })}
@@ -522,21 +464,19 @@ function ContinueWatchingRow({
 
         <button
           type="button"
-          onClick={() =>
-            scroll(1)
-          }
+          onClick={() => scroll(1)}
           className="absolute right-4 top-[122px] z-40 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/[0.08] bg-[#0b0910]/80 text-white/60 opacity-0 shadow-xl backdrop-blur-xl transition-all duration-200 hover:bg-violet-500/25 hover:text-white group-hover/continue:opacity-100 lg:flex"
         >
-          <Icon
-            name="chevronRight"
-            className="h-4 w-4"
-          />
+          <Icon name="chevronRight" className="h-4 w-4" />
         </button>
-
       </div>
-
     </section>
-  );======================================================= */
+  );
+}
+
+/* =========================================================
+   WATCH ON STREAM
+========================================================= */
 
 function PlayableContentRow({ items, navigate }) {
   const rail = useRef(null);
