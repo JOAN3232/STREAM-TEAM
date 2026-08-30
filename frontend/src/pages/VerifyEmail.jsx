@@ -1,18 +1,18 @@
 import { useEffect, useState } from "react";
 import {
   Link,
-  useNavigate,
   useSearchParams,
 } from "react-router-dom";
+import { sendVerificationEmail } from "../services/authService";
 
 export default function VerifyEmail() {
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
   const email = searchParams.get("email") || "";
 
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
   const [promotions, setPromotions] = useState(true);
   const [isScrolled, setIsScrolled] = useState(false);
 
@@ -35,20 +35,22 @@ export default function VerifyEmail() {
       window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const handleSendLink = () => {
+  const handleSendLink = async () => {
     if (!isValidEmail || loading || sent) return;
 
     setLoading(true);
+    setError("");
 
-    // UI ONLY FOR NOW
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      // Name isn't collected on this page yet — using the email prefix as a placeholder
+      await sendVerificationEmail(email, email.split("@")[0]);
       setSent(true);
-    }, 1000);
-  };
-
-  const handleContinueSetup = () => {
-    navigate(`/plans?email=${encodeURIComponent(email)}`);
+    } catch (err) {
+      console.error("Failed to send verification email", err);
+      setError("Couldn't send the email. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -195,6 +197,13 @@ export default function VerifyEmail() {
             </div>
           )}
 
+          {/* SEND ERROR */}
+          {error && (
+            <div className="mt-4 rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+              {error}
+            </div>
+          )}
+
           {/* PROMOTIONS */}
           <label className="mt-6 flex cursor-pointer items-start gap-3 text-sm text-white/55">
             <input
@@ -255,22 +264,10 @@ export default function VerifyEmail() {
 
           {/* SENT STATE */}
           {sent && (
-            <>
-              <div className="mt-6 rounded-xl border border-violet-400/15 bg-violet-500/10 px-4 py-4 text-sm leading-6 text-violet-100 backdrop-blur-xl">
-                Demo mode: the sign-up link has been marked as sent.
-                We&apos;ll connect real email verification when we build the
-                backend.
-              </div>
-
-              <button
-                type="button"
-                onClick={handleContinueSetup}
-                className="mt-5 flex h-14 w-full items-center justify-center rounded-xl bg-gradient-to-r from-violet-700 via-purple-600 to-fuchsia-600 font-semibold text-white shadow-[0_12px_45px_rgba(126,34,206,0.25)] transition duration-300 hover:scale-[1.01]"
-              >
-                Continue Setup
-                <span className="ml-2">→</span>
-              </button>
-            </>
+            <div className="mt-6 rounded-xl border border-violet-400/15 bg-violet-500/10 px-4 py-4 text-sm leading-6 text-violet-100 backdrop-blur-xl">
+              Check your inbox — we've sent a link to <strong>{email}</strong>.
+              Click it to set your password and finish creating your account.
+            </div>
           )}
 
           {/* CHANGE EMAIL */}

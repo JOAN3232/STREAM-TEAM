@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { loginUser } from "../services/authService";
 
 const slides = [
   {
@@ -23,6 +24,7 @@ const slides = [
 ];
 
 export default function Login() {
+  const navigate = useNavigate();
   const [currentSlide, setCurrentSlide] = useState(0);
 
   useEffect(() => {
@@ -33,6 +35,28 @@ export default function Login() {
     return () => clearInterval(interval);
   }, []);
 
+  const [identifier, setIdentifier] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleLoginSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      const data = await loginUser(identifier, password);
+      localStorage.setItem("token", data.token);
+      navigate("/");
+    } catch (err) {
+      console.error("Login failed", err);
+      setError("Invalid email or password. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#08060d] text-white">
       {/* MOBILE MOVIE BACKGROUND */}
@@ -40,11 +64,10 @@ export default function Login() {
         {slides.map((slide, index) => (
           <div
             key={slide.title}
-            className={`absolute inset-0 transition-all duration-[1400ms] ease-in-out ${
-              index === currentSlide
+            className={`absolute inset-0 transition-all duration-[1400ms] ease-in-out ${index === currentSlide
                 ? "scale-100 opacity-100"
                 : "scale-105 opacity-0"
-            }`}
+              }`}
           >
             <img
               src={slide.image}
@@ -55,9 +78,7 @@ export default function Login() {
         ))}
 
         <div className="absolute inset-0 bg-black/60" />
-
         <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-[#08060d]/35 to-[#08060d]/90" />
-
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(109,40,217,0.14),transparent_65%)]" />
       </div>
 
@@ -70,9 +91,7 @@ export default function Login() {
           <Link
             to="/"
             className="w-fit text-2xl font-bold tracking-[0.12em] text-violet-400 sm:text-3xl"
-            style={{
-              fontFamily: '"Cormorant Garamond", serif',
-            }}
+            style={{ fontFamily: '"Cormorant Garamond", serif' }}
           >
             STREAM
           </Link>
@@ -97,9 +116,7 @@ export default function Login() {
 
               <h1
                 className="text-4xl font-semibold leading-[1.05] text-white sm:text-5xl lg:text-[56px]"
-                style={{
-                  fontFamily: '"Cormorant Garamond", serif',
-                }}
+                style={{ fontFamily: '"Cormorant Garamond", serif' }}
               >
                 Enter your info
                 <br />
@@ -110,22 +127,36 @@ export default function Login() {
                 Or get started with a new account.
               </p>
 
-              <form
-                className="mt-9"
-                onSubmit={(e) => e.preventDefault()}
-              >
+              <form className="mt-9" onSubmit={handleLoginSubmit}>
                 <input
                   type="text"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
                   placeholder="Email or mobile number"
                   className="h-14 w-full rounded-xl border border-white/20 bg-black/35 px-5 text-sm text-white outline-none backdrop-blur-xl transition placeholder:text-white/45 focus:border-violet-400 focus:bg-black/45 focus:ring-2 focus:ring-violet-500/15"
+                  required
                 />
+
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Password"
+                  className="mt-4 h-14 w-full rounded-xl border border-white/20 bg-black/35 px-5 text-sm text-white outline-none backdrop-blur-xl transition placeholder:text-white/45 focus:border-violet-400 focus:bg-black/45 focus:ring-2 focus:ring-violet-500/15"
+                  required
+                />
+
+                {error && (
+                  <p className="mt-3 text-sm text-red-300">{error}</p>
+                )}
 
                 <button
                   type="submit"
-                  className="mt-4 h-14 w-full rounded-xl bg-gradient-to-r from-violet-700 via-purple-600 to-fuchsia-600 font-semibold text-white shadow-[0_10px_40px_rgba(126,34,206,0.25)] transition duration-300 hover:scale-[1.01]"
+                  disabled={loading}
+                  className="mt-4 h-14 w-full rounded-xl bg-gradient-to-r from-violet-700 via-purple-600 to-fuchsia-600 font-semibold text-white shadow-[0_10px_40px_rgba(126,34,206,0.25)] transition duration-300 hover:scale-[1.01] disabled:opacity-60"
                 >
-                  Continue
-                  <span className="ml-2">→</span>
+                  {loading ? "Signing in..." : "Continue"}
+                  {!loading && <span className="ml-2">→</span>}
                 </button>
               </form>
 
@@ -150,11 +181,10 @@ export default function Login() {
                 key={slide.title}
                 type="button"
                 onClick={() => setCurrentSlide(index)}
-                className={`h-[3px] rounded-full transition-all duration-500 ${
-                  index === currentSlide
+                className={`h-[3px] rounded-full transition-all duration-500 ${index === currentSlide
                     ? "w-8 bg-violet-400"
                     : "w-3 bg-white/30"
-                }`}
+                  }`}
               />
             ))}
           </div>
@@ -166,18 +196,16 @@ export default function Login() {
             {slides.map((slide, index) => (
               <div
                 key={slide.title}
-                className={`absolute inset-0 transition-all duration-[1400ms] ease-in-out ${
-                  index === currentSlide
+                className={`absolute inset-0 transition-all duration-[1400ms] ease-in-out ${index === currentSlide
                     ? "scale-100 opacity-100"
                     : "scale-105 opacity-0"
-                }`}
+                  }`}
               >
                 <img
                   src={slide.image}
                   alt={slide.title}
                   className="h-full w-full object-cover object-center"
                 />
-
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/25 to-black/10" />
                 <div className="absolute inset-0 bg-gradient-to-r from-black/30 via-transparent to-transparent" />
               </div>
@@ -196,9 +224,7 @@ export default function Login() {
 
               <h2
                 className="text-5xl font-semibold text-white lg:text-6xl"
-                style={{
-                  fontFamily: '"Cormorant Garamond", serif',
-                }}
+                style={{ fontFamily: '"Cormorant Garamond", serif' }}
               >
                 {slides[currentSlide].title}
               </h2>
@@ -209,11 +235,10 @@ export default function Login() {
                     key={slide.title}
                     type="button"
                     onClick={() => setCurrentSlide(index)}
-                    className={`h-[4px] rounded-full transition-all duration-500 ${
-                      index === currentSlide
+                    className={`h-[4px] rounded-full transition-all duration-500 ${index === currentSlide
                         ? "w-10 bg-violet-400"
                         : "w-4 bg-white/30"
-                    }`}
+                      }`}
                   />
                 ))}
               </div>

@@ -5,6 +5,7 @@ import {
   getBackdropUrl,
   getTrendingMovies,
 } from "../services/tmdbService";
+// import { checkEmailExists } from "../services/authService";
 
 export default function Hero() {
   const navigate = useNavigate();
@@ -55,7 +56,7 @@ export default function Hero() {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
   };
 
-  const handleGetStarted = () => {
+  const handleGetStarted = async () => {
     const cleanEmail = email.trim();
 
     if (!cleanEmail) {
@@ -73,11 +74,23 @@ export default function Hero() {
     setEmailError("");
     setLoading(true);
 
-    setTimeout(() => {
-      navigate(
-        `/register-intro?email=${encodeURIComponent(cleanEmail)}`
-      );
-    }, 900);
+    try {
+      const { exists } = await checkEmailExists(cleanEmail);
+
+      if (exists) {
+        // Direct returning users to login page
+        navigate(`/login?email=${encodeURIComponent(cleanEmail)}`);
+      } else {
+        // Direct new users into registration flow
+        navigate(`/register-intro?email=${encodeURIComponent(cleanEmail)}`);
+      }
+    } catch (err) {
+      console.error("Email verification error:", err);
+      // Fallback navigation in case of network issues
+      navigate(`/register-intro?email=${encodeURIComponent(cleanEmail)}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
