@@ -48,7 +48,7 @@ export default function Login() {
     try {
       const data = await loginUser(identifier, password);
       localStorage.setItem("token", data.token);
-      navigate("/");
+      navigate("/whos-watching");
     } catch (err) {
       console.error("Login failed", err);
       setError("Invalid email or password. Please try again.");
