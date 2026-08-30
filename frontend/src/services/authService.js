@@ -15,11 +15,8 @@ export async function registerUser(data) {
     const errorText = await response.text();
     throw new Error(`Server returned status ${response.status}: ${errorText}`);
   }
-  
 
   return response.json();
-
-  
 }
 
 export async function loginUser(identifier, password) {
@@ -38,6 +35,7 @@ export async function loginUser(identifier, password) {
 
   return response.json();
 }
+
 export async function sendVerificationEmail(email, name) {
   const response = await fetch(`${API_BASE_URL}/send-verification`, {
     method: "POST",
@@ -48,7 +46,7 @@ export async function sendVerificationEmail(email, name) {
     const errorText = await response.text();
     throw new Error(`Server returned status ${response.status}: ${errorText}`);
   }
-  return response.text(); // plain string response, not JSON
+  return response.text();
 }
 
 export async function setPassword(token, password) {
@@ -62,4 +60,21 @@ export async function setPassword(token, password) {
     throw new Error(`Server returned status ${response.status}: ${errorText}`);
   }
   return response.json();
+}
+
+export async function selectPlan(plan) {
+  const token = localStorage.getItem("token");
+
+  const response = await fetch(`${API_BASE_URL}/select-plan`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token, plan }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Server returned status ${response.status}: ${errorText}`);
+  }
+
+  return response.text();
 }

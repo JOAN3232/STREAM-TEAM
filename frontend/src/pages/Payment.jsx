@@ -1,13 +1,9 @@
 import { useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { registerUser } from "../services/authService";
+import { useNavigate } from "react-router-dom";
+import { selectPlan } from "../services/authService";
 
 export default function Payment() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  
-  // Extract email passed from previous registration steps
-  const email = searchParams.get("email") || "";
 
   const [selectedPlan, setSelectedPlan] = useState("premium");
   const [form, setForm] = useState({
@@ -31,31 +27,22 @@ export default function Payment() {
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  setIsProcessing(true);
+    e.preventDefault();
+    setIsProcessing(true);
 
-  // Retrieve password from URL if passed from earlier step, or provide a fallback
-  const userPassword = searchParams.get("password") || "DefaultSecurePass123!";
-  const userName = form.cardName.trim() || "Subscriber";
-
-  try {
-    await registerUser({
-      email: email.trim(),
-      name: userName,
-      password: userPassword,
-    });
-
-    setIsProcessing(false);
-    setShowSuccess(true);
-  } catch (error) {
-    setIsProcessing(false);
-    console.error("Payment registration error:", error);
-    alert("Registration failed: " + error.message);
-  }
-};
+    try {
+      await selectPlan(selectedPlan);
+      setIsProcessing(false);
+      setShowSuccess(true);
+    } catch (error) {
+      setIsProcessing(false);
+      console.error("Plan selection error:", error);
+      alert("Something went wrong saving your plan: " + error.message);
+    }
+  };
 
   const handleContinue = () => {
-    navigate("/");
+    navigate("/whos-watching");
   };
 
   return (
@@ -171,7 +158,7 @@ export default function Payment() {
                   name="cvv"
                   value={form.cvv}
                   onChange={handleChange}
-                  placeholder="123"
+                  placeholder="1234"
                   maxLength={4}
                   className="w-full bg-black/40 border border-white/10 rounded-md px-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-[#8b5cf6] transition-colors"
                   required

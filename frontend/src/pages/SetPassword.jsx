@@ -29,7 +29,7 @@ export default function SetPassword() {
     try {
       const data = await setPasswordApi(token, password);
       localStorage.setItem("token", data.token);
-      navigate("/whos-watching");
+      navigate("/plans");
     } catch (err) {
       console.error("Set password failed", err);
       setError("This link may have expired. Please request a new one.");
