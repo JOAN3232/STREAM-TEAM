@@ -1,16 +1,45 @@
+import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { registerUser } from "../services/authService";
 
 export default function RegisterIntro() {
   const navigate = useNavigate();
   const location = useLocation();
 
   const params = new URLSearchParams(location.search);
-  const email = params.get("email") || "";
+  const presetEmail = params.get("email") || "";
 
-  const handleContinue = () => {
-    navigate(
-      `/verify-email?email=${encodeURIComponent(email)}`
-    );
+  const [email, setEmail] = useState(presetEmail);
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleContinue = async () => {
+    setError("");
+
+    if (!email.trim()) {
+      setError("Enter your email address.");
+      return;
+    }
+
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      await registerUser({
+        email: email.trim(),
+        password,
+      });
+      navigate(`/verify-email?email=${encodeURIComponent(email.trim())}`);
+    } catch (err) {
+      setError(err.message || "Could not create your account.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -86,14 +115,49 @@ export default function RegisterIntro() {
             </div>
           )}
 
-          <button
-            type="button"
-            onClick={handleContinue}
-            className="mt-7 flex h-14 w-full items-center justify-center rounded-xl bg-gradient-to-r from-violet-700 via-purple-600 to-fuchsia-600 font-semibold text-white shadow-[0_12px_45px_rgba(126,34,206,0.25)] transition duration-300 hover:scale-[1.01]"
-          >
-            Continue
-            <span className="ml-2">→</span>
-          </button>
+          <div className="mt-7 space-y-4">
+            <input
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="Email address"
+              className="h-14 w-full rounded-xl border border-white/20 bg-black/35 px-5 text-sm text-white outline-none backdrop-blur-xl transition placeholder:text-white/45 focus:border-violet-400 focus:bg-black/45 focus:ring-2 focus:ring-violet-500/15"
+              required
+            />
+
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="Create password"
+                className="h-14 w-full rounded-xl border border-white/20 bg-black/35 px-5 pr-14 text-sm text-white outline-none backdrop-blur-xl transition placeholder:text-white/45 focus:border-violet-400 focus:bg-black/45 focus:ring-2 focus:ring-violet-500/15"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute inset-y-0 right-0 flex w-14 items-center justify-center text-white/50 transition hover:text-violet-300"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? "🙈" : "👁"}
+              </button>
+            </div>
+
+            {error && (
+              <p className="text-sm text-red-300">{error}</p>
+            )}
+
+            <button
+              type="button"
+              disabled={submitting}
+              onClick={handleContinue}
+              className="flex h-14 w-full items-center justify-center rounded-xl bg-gradient-to-r from-violet-700 via-purple-600 to-fuchsia-600 font-semibold text-white shadow-[0_12px_45px_rgba(126,34,206,0.25)] transition duration-300 hover:scale-[1.01] disabled:opacity-70"
+            >
+              {submitting ? "Creating account..." : "Continue"}
+              {!submitting && <span className="ml-2">→</span>}
+            </button>
+          </div>
         </div>
       </section>
     </main>

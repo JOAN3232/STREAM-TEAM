@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Link,
   useNavigate,
   useSearchParams,
 } from "react-router-dom";
+import { initializePayment, verifyPayment } from "../services/paymentService";
 
 const planDetails = {
   basic: {
@@ -34,12 +35,25 @@ export default function Payment() {
 
   const email = searchParams.get("email") || "";
   const planId = searchParams.get("plan") || "standard";
+  const reference = searchParams.get("reference") || "";
+  const trxref = searchParams.get("trxref") || "";
 
   const plan = planDetails[planId] || planDetails.standard;
+  const activeReference = reference || trxref;
 
-  const [paymentMethod, setPaymentMethod] = useState("card");
+  const [paymentMethod, setPaymentMethod] = useState("paystack");
   const [isScrolled, setIsScrolled] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const [subscription, setSubscription] = useState(null);
+
+  const buttonLabel = useMemo(() => {
+    if (verifying) return "Verifying payment...";
+    if (loading) return paymentMethod === "paystack" ? "Opening Paystack..." : "Processing...";
+    return paymentMethod === "paystack" ? "Continue to Paystack" : "Continue Securely";
+  }, [loading, paymentMethod, verifying]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -56,28 +70,69 @@ export default function Payment() {
       window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const handleContinue = () => {
-    if (loading) return;
+  useEffect(() => {
+    if (!activeReference) return;
 
-    setLoading(true);
+    let cancelled = false;
 
-    setTimeout(() => {
-      navigate("/whos-watching");
-    }, 900);
+    const runVerification = async () => {
+      try {
+        setVerifying(true);
+        setError("");
+        const data = await verifyPayment(activeReference);
+        if (cancelled) return;
+        setSubscription(data);
+        setSuccessMessage("Payment verified. Your subscription is now active.");
+      } catch (err) {
+        if (cancelled) return;
+        setError(err.message || "Could not verify your payment.");
+      } finally {
+        if (!cancelled) {
+          setVerifying(false);
+        }
+      }
+    };
+
+    runVerification();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeReference]);
+
+  const handleContinue = async () => {
+    if (loading || verifying) return;
+
+    try {
+      setLoading(true);
+      setError("");
+      setSuccessMessage("");
+
+      const data = await initializePayment(planId, email);
+
+      if (!data?.authorizationUrl || !data?.reference) {
+        throw new Error("Payment checkout could not be started.");
+      }
+
+      window.location.assign(data.authorizationUrl);
+    } catch (err) {
+      setError(err.message || "Could not initialize payment.");
+      setLoading(false);
+    }
+  };
+
+  const handleFinish = () => {
+    navigate("/whos-watching");
   };
 
   return (
     <main className="relative min-h-screen overflow-x-hidden bg-[#07050d] text-white">
-      {/* BACKGROUND */}
       <div className="pointer-events-none fixed inset-0">
         <div className="absolute left-[30%] top-[30%] h-[500px] w-[500px] rounded-full bg-violet-700/[0.1] blur-[150px]" />
-
         <div className="absolute bottom-0 right-0 h-[380px] w-[380px] rounded-full bg-fuchsia-700/[0.06] blur-[130px]" />
-
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#07050d]/40 to-[#050407]" />
       </div>
 
-      {/* NAVBAR */}
       <header
         className={`
           fixed
@@ -114,7 +169,6 @@ export default function Payment() {
         </div>
       </header>
 
-      {/* BACK */}
       <div className="relative z-20 mx-auto max-w-7xl px-6 pt-[105px] sm:px-10 lg:px-14">
         <div className="flex items-center justify-between">
           <button
@@ -135,7 +189,6 @@ export default function Payment() {
         </div>
       </div>
 
-      {/* CONTENT */}
       <section className="relative z-10 mx-auto max-w-6xl px-6 pb-20 pt-8 sm:px-10 lg:px-14">
         <div className="text-center">
           <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-violet-400">
@@ -152,12 +205,17 @@ export default function Payment() {
           </h1>
 
           <p className="mx-auto mt-4 max-w-lg text-sm leading-6 text-white/50 sm:text-base">
-            Confirm your plan and choose how you&apos;d like to pay.
+            Confirm your plan and complete your subscription using Paystack TEST mode.
           </p>
         </div>
 
+        {(error || successMessage) && (
+          <div className={`mx-auto mt-8 max-w-3xl rounded-2xl border p-4 text-sm ${error ? "border-red-400/35 bg-red-500/10 text-red-100" : "border-emerald-400/30 bg-emerald-500/10 text-emerald-100"}`}>
+            {error || successMessage}
+          </div>
+        )}
+
         <div className="mx-auto mt-10 grid max-w-5xl gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-          {/* PAYMENT METHODS */}
           <div className="rounded-[28px] border border-white/[0.09] bg-white/[0.025] p-6 backdrop-blur-xl sm:p-8">
             <p className="text-[10px] uppercase tracking-[0.25em] text-white/35">
               Payment method
@@ -183,7 +241,7 @@ export default function Payment() {
                   </p>
 
                   <p className="mt-1 text-xs text-white/40">
-                    Visa, Mastercard and Verve
+                    Processed via Paystack TEST checkout
                   </p>
                 </div>
 
@@ -215,7 +273,7 @@ export default function Payment() {
                   </p>
 
                   <p className="mt-1 text-xs text-white/40">
-                    Pay securely through Paystack
+                    Redirect to Paystack TEST payment page
                   </p>
                 </div>
 
@@ -235,13 +293,11 @@ export default function Payment() {
 
             <div className="mt-7 rounded-2xl border border-white/[0.07] bg-black/15 p-4">
               <p className="text-xs leading-5 text-white/45">
-                No payment details are being collected during this UI demo.
-                Real secure checkout will be connected later.
+                STREAM does not trust the frontend to confirm payment. Your subscription is only activated after backend verification with Paystack.
               </p>
             </div>
           </div>
 
-          {/* SUMMARY */}
           <div className="rounded-[28px] border border-violet-400/20 bg-gradient-to-b from-violet-500/[0.08] to-white/[0.025] p-6 backdrop-blur-xl sm:p-8">
             <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-violet-300">
               Your membership
@@ -301,6 +357,30 @@ export default function Payment() {
                   Monthly
                 </span>
               </div>
+
+              {email && (
+                <div className="flex justify-between gap-4">
+                  <span className="text-white/40">
+                    Account email
+                  </span>
+
+                  <span className="font-medium text-right text-white/80 break-all">
+                    {email}
+                  </span>
+                </div>
+              )}
+
+              {subscription?.status && (
+                <div className="flex justify-between gap-4">
+                  <span className="text-white/40">
+                    Status
+                  </span>
+
+                  <span className="font-medium text-emerald-300">
+                    {subscription.status}
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="my-7 h-px bg-white/[0.09]" />
@@ -315,24 +395,35 @@ export default function Payment() {
               </span>
             </div>
 
-            <button
-              type="button"
-              onClick={handleContinue}
-              disabled={loading}
-              className="mt-7 flex h-14 w-full items-center justify-center rounded-xl bg-gradient-to-r from-violet-700 via-purple-600 to-fuchsia-600 font-semibold text-white transition duration-300 hover:scale-[1.01] disabled:cursor-wait disabled:opacity-70"
-            >
-              {loading ? (
-                <span className="flex items-center gap-3">
-                  <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                  Processing...
-                </span>
-              ) : (
-                <>
-                  Continue Securely
-                  <span className="ml-2">→</span>
-                </>
-              )}
-            </button>
+            {subscription?.status === "ACTIVE" ? (
+              <button
+                type="button"
+                onClick={handleFinish}
+                className="mt-7 flex h-14 w-full items-center justify-center rounded-xl bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 font-semibold text-white transition duration-300 hover:scale-[1.01]"
+              >
+                Continue to profiles
+                <span className="ml-2">→</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleContinue}
+                disabled={loading || verifying}
+                className="mt-7 flex h-14 w-full items-center justify-center rounded-xl bg-gradient-to-r from-violet-700 via-purple-600 to-fuchsia-600 font-semibold text-white transition duration-300 hover:scale-[1.01] disabled:cursor-wait disabled:opacity-70"
+              >
+                {(loading || verifying) ? (
+                  <span className="flex items-center gap-3">
+                    <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                    {buttonLabel}
+                  </span>
+                ) : (
+                  <>
+                    {buttonLabel}
+                    <span className="ml-2">→</span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
         </div>
       </section>

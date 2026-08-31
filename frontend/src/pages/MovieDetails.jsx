@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { addToWatchlist } from "../services/watchlistService";
 
 import {
   getBackdropUrl,
   getMediaDetails,
   getMediaRecommendations,
   getPosterUrl,
-} from "../services/tmdbService";
+} from "../services/movieService";
 
 export default function MovieDetails() {
   const navigate = useNavigate();
@@ -15,6 +16,8 @@ export default function MovieDetails() {
   const [movie, setMovie] = useState(null);
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [watchlistLoading, setWatchlistLoading] = useState(false);
+  const [watchlistMessage, setWatchlistMessage] = useState("");
 
   useEffect(() => {
     const loadMovie = async () => {
@@ -73,6 +76,21 @@ export default function MovieDetails() {
   );
 
   const cast = movie.credits?.cast?.slice(0, 5) || [];
+
+  const handleAddToWatchlist = async () => {
+    if (!movie?.id || watchlistLoading) return;
+
+    try {
+      setWatchlistLoading(true);
+      setWatchlistMessage("");
+      await addToWatchlist(movie.id);
+      setWatchlistMessage("Added to My List.");
+    } catch (error) {
+      setWatchlistMessage(error.message || "Could not update My List.");
+    } finally {
+      setWatchlistLoading(false);
+    }
+  };
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#06050a] text-white">
@@ -151,11 +169,19 @@ export default function MovieDetails() {
 
               <button
                 type="button"
-                className="rounded-xl border border-white/15 bg-black/30 px-6 py-3 text-sm font-semibold text-white backdrop-blur-xl transition hover:border-violet-400/50 hover:bg-violet-500/10"
+                onClick={handleAddToWatchlist}
+                disabled={watchlistLoading}
+                className="rounded-xl border border-white/15 bg-black/30 px-6 py-3 text-sm font-semibold text-white backdrop-blur-xl transition hover:border-violet-400/50 hover:bg-violet-500/10 disabled:opacity-70"
               >
-                + My List
+                {watchlistLoading ? "Saving..." : "+ My List"}
               </button>
             </div>
+
+            {watchlistMessage && (
+              <p className="mt-4 text-sm text-white/70">
+                {watchlistMessage}
+              </p>
+            )}
           </div>
         </div>
       </section>

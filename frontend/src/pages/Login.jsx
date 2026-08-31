@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { loginUser } from "../services/authService";
 
 const slides = [
   {
@@ -23,7 +24,32 @@ const slides = [
 ];
 
 export default function Login() {
+  const navigate = useNavigate();
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [identifier, setIdentifier] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleLoginSubmit = async (event) => {
+    event.preventDefault();
+    setError("");
+    setSubmitting(true);
+
+    try {
+      const data = await loginUser(identifier, password);
+      if (data?.token) {
+        localStorage.setItem("token", data.token);
+      }
+      navigate("/whos-watching");
+    } catch (err) {
+      console.error("Login failed", err);
+      setError(err.message || "Could not sign in. Check your details and try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -110,22 +136,46 @@ export default function Login() {
                 Or get started with a new account.
               </p>
 
-              <form
-                className="mt-9"
-                onSubmit={(e) => e.preventDefault()}
-              >
+              <form className="mt-9" onSubmit={handleLoginSubmit}>
                 <input
                   type="text"
+                  value={identifier}
+                  onChange={(event) => setIdentifier(event.target.value)}
                   placeholder="Email or mobile number"
                   className="h-14 w-full rounded-xl border border-white/20 bg-black/35 px-5 text-sm text-white outline-none backdrop-blur-xl transition placeholder:text-white/45 focus:border-violet-400 focus:bg-black/45 focus:ring-2 focus:ring-violet-500/15"
+                  required
                 />
+
+                <div className="relative mt-4">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    placeholder="Password"
+                    className="h-14 w-full rounded-xl border border-white/20 bg-black/35 px-5 pr-14 text-sm text-white outline-none backdrop-blur-xl transition placeholder:text-white/45 focus:border-violet-400 focus:bg-black/45 focus:ring-2 focus:ring-violet-500/15"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute inset-y-0 right-0 flex w-14 items-center justify-center text-white/50 transition hover:text-violet-300"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? "🙈" : "👁"}
+                  </button>
+                </div>
+
+                {error && (
+                  <p className="mt-3 text-sm text-red-300">{error}</p>
+                )}
 
                 <button
                   type="submit"
-                  className="mt-4 h-14 w-full rounded-xl bg-gradient-to-r from-violet-700 via-purple-600 to-fuchsia-600 font-semibold text-white shadow-[0_10px_40px_rgba(126,34,206,0.25)] transition duration-300 hover:scale-[1.01]"
+                  disabled={submitting}
+                  className="mt-4 h-14 w-full rounded-xl bg-gradient-to-r from-violet-700 via-purple-600 to-fuchsia-600 font-semibold text-white shadow-[0_10px_40px_rgba(126,34,206,0.25)] transition duration-300 hover:scale-[1.01] disabled:opacity-70"
                 >
-                  Continue
-                  <span className="ml-2">→</span>
+                  {submitting ? "Signing in..." : "Continue"}
+                  {!submitting && <span className="ml-2">→</span>}
                 </button>
               </form>
 

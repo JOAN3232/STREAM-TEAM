@@ -11,11 +11,14 @@ import Login from "./pages/Login";
 import RegisterIntro from "./pages/RegisterIntro";
 import VerifyEmail from "./pages/VerifyEmail";
 import Plans from "./pages/Plans";
+
 import Payment from "./pages/Payment";
 import WhosWatching from "./pages/WhosWatching";
-import  Browse from "./pages/Browse";
+import Browse from "./pages/Browse";
 import MovieDetails from "./pages/MovieDetails";
 import Player from "./pages/Player";
+import MyList from "./pages/MyList";
+import Account from "./pages/Account";
 function Home() {
   return (
     <>
@@ -60,6 +63,7 @@ export default function App() {
           element={<Plans />}
         />
 
+
         <Route
           path="/payment"
           element={<Payment />}
@@ -73,6 +77,16 @@ export default function App() {
         <Route
           path="/browse"
           element={<Browse />}
+        />
+
+        <Route
+          path="/my-list"
+          element={<MyList />}
+        />
+
+        <Route
+          path="/account"
+          element={<Account />}
         />
 
         <Route

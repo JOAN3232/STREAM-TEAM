@@ -1,80 +1,53 @@
-// src/services/authService.js
+import apiClient, { getApiErrorMessage } from "./apiClient";
 
-const API_BASE_URL = "http://localhost:8081/api/auth";
+const AUTH_BASE = "/api/auth";
 
 export async function registerUser(data) {
-  const response = await fetch(`${API_BASE_URL}/register`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(data),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Server returned status ${response.status}: ${errorText}`);
+  try {
+    const response = await apiClient.post(`${AUTH_BASE}/register`, data);
+    return response.data;
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error, "Could not create account."));
   }
-
-  return response.json();
 }
 
 export async function loginUser(identifier, password) {
-  const response = await fetch(`${API_BASE_URL}/login`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ email: identifier, password }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Server returned status ${response.status}: ${errorText}`);
+  try {
+    const response = await apiClient.post(`${AUTH_BASE}/login`, {
+      email: identifier,
+      password,
+    });
+    return response.data;
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error, "Could not sign in."));
   }
-
-  return response.json();
 }
 
-export async function sendVerificationEmail(email, name) {
-  const response = await fetch(`${API_BASE_URL}/send-verification`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, name }),
-  });
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Server returned status ${response.status}: ${errorText}`);
+export async function verifyEmailToken(token) {
+  try {
+    const response = await apiClient.get(`${AUTH_BASE}/verify-email`, {
+      params: { token },
+    });
+    return response.data;
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error, "Could not verify email."));
   }
-  return response.text();
 }
 
-export async function setPassword(token, password) {
-  const response = await fetch(`${API_BASE_URL}/set-password`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token, password }),
-  });
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Server returned status ${response.status}: ${errorText}`);
+export async function verifyEmailTokenPost(token) {
+  try {
+    const response = await apiClient.post(`${AUTH_BASE}/verify-email`, { token });
+    return response.data;
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error, "Could not verify email."));
   }
-  return response.json();
 }
 
-export async function selectPlan(plan) {
-  const token = localStorage.getItem("token");
-
-  const response = await fetch(`${API_BASE_URL}/select-plan`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token, plan }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Server returned status ${response.status}: ${errorText}`);
+export async function resendVerification(email) {
+  try {
+    const response = await apiClient.post(`${AUTH_BASE}/resend-verification`, { email });
+    return response.data;
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error, "Could not resend verification email."));
   }
-
-  return response.text();
 }

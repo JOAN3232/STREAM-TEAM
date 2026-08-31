@@ -4,6 +4,7 @@ import {
   useNavigate,
   useSearchParams,
 } from "react-router-dom";
+import { createSubscription } from "../services/subscriptionService";
 
 const plans = [
   {
@@ -47,6 +48,8 @@ export default function Plans() {
 
   const [isScrolled, setIsScrolled] =
     useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const handleScroll = () => {
@@ -75,12 +78,23 @@ export default function Plans() {
       (plan) => plan.id === selectedPlan
     ) || plans[1];
 
-  const handleContinue = () => {
-    navigate(
-      `/payment?email=${encodeURIComponent(
-        email
-      )}&plan=${selectedPlan}`
-    );
+  const handleContinue = async () => {
+    if (submitting) return;
+
+    try {
+      setSubmitting(true);
+      setError("");
+      await createSubscription(selectedPlan);
+      navigate(
+        `/payment?email=${encodeURIComponent(
+          email
+        )}&plan=${selectedPlan}`
+      );
+    } catch (err) {
+      setError(err.message || "Could not save selected plan.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -330,6 +344,12 @@ export default function Plans() {
         {/* ==============================
             SELECTED PLAN
         ============================== */}
+        {error && (
+          <p className="mx-auto mt-6 max-w-sm text-center text-sm text-red-300">
+            {error}
+          </p>
+        )}
+
         <div className="mx-auto mt-8 max-w-3xl rounded-[22px] border border-white/[0.08] bg-white/[0.025] px-5 py-4 backdrop-blur-xl">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -356,14 +376,17 @@ export default function Plans() {
         <div className="mx-auto mt-6 max-w-xl">
           <button
             type="button"
+            disabled={submitting}
             onClick={handleContinue}
-            className="flex h-14 w-full items-center justify-center rounded-xl bg-gradient-to-r from-violet-700 via-purple-600 to-fuchsia-600 font-semibold text-white shadow-[0_12px_45px_rgba(126,34,206,0.28)] transition duration-300 hover:scale-[1.01]"
+            className="flex h-14 w-full items-center justify-center rounded-xl bg-gradient-to-r from-violet-700 via-purple-600 to-fuchsia-600 font-semibold text-white shadow-[0_12px_45px_rgba(126,34,206,0.28)] transition duration-300 hover:scale-[1.01] disabled:opacity-70"
           >
-            Continue with {selected.name}
+            {submitting ? `Saving ${selected.name}...` : `Continue with ${selected.name}`}
 
-            <span className="ml-2">
-              →
-            </span>
+            {!submitting && (
+              <span className="ml-2">
+                →
+              </span>
+            )}
           </button>
 
           <p className="mt-4 text-center text-xs text-white/30">

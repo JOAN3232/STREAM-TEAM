@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   getBackdropUrl,
   getTrendingMovies,
-} from "../services/tmdbService";
+} from "../services/movieService";
 
 export default function Hero() {
   const navigate = useNavigate();
@@ -19,18 +19,15 @@ export default function Hero() {
       try {
         const movies = await getTrendingMovies();
 
-        console.log("TMDB trending movies:", movies);
-
         const movieBackgrounds = movies
-          .filter((movie) => movie.backdrop_path)
+          .filter((movie) => movie.backdrop_path || movie.backdropUrl)
           .slice(0, 7)
           .map((movie) => ({
             id: movie.id,
-            image: getBackdropUrl(movie.backdrop_path),
+            image: getBackdropUrl(movie.backdrop_path || movie.backdropUrl),
             title: movie.title || movie.name || "Movie",
           }));
 
-        console.log("Hero backgrounds:", movieBackgrounds);
 
         setBackgrounds(movieBackgrounds);
       } catch (error) {
@@ -84,7 +81,7 @@ export default function Hero() {
 
   return (
     <section className="relative min-h-screen overflow-hidden bg-[#050505]">
-      {/* TMDB BACKGROUND SLIDESHOW */}
+      {/* BACKGROUND SLIDESHOW */}
       {backgrounds.map((movie, index) => (
         <div
           key={movie.id}
@@ -102,7 +99,7 @@ export default function Hero() {
         </div>
       ))}
 
-      {/* FALLBACK ONLY WHILE TMDB LOADS */}
+      {/* FALLBACK ONLY WHILE TITLES LOAD */}
       {backgrounds.length === 0 && (
         <div className="absolute inset-0 bg-gradient-to-br from-[#160b27] via-[#09060f] to-[#050505]" />
       )}

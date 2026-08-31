@@ -1,0 +1,45 @@
+package com.stream.user.controller;
+
+import com.stream.user.dto.PaymentInitializeRequest;
+import com.stream.user.dto.SubscriptionRequest;
+import com.stream.user.security.CurrentUser;
+import com.stream.user.service.BillingService;
+import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class BillingController {
+
+    private final CurrentUser currentUser;
+    private final BillingService billingService;
+
+    public BillingController(CurrentUser currentUser, BillingService billingService) {
+        this.currentUser = currentUser;
+        this.billingService = billingService;
+    }
+
+    @GetMapping("/api/subscriptions/me")
+    public Object currentSubscription() {
+        return billingService.current(currentUser.require().userId());
+    }
+
+    @PostMapping("/api/subscriptions")
+    public Object selectPlan(@Valid @RequestBody SubscriptionRequest request) {
+        return billingService.selectPlan(currentUser.require().userId(), request.getPlan());
+    }
+
+    @PostMapping("/api/payments/initialize")
+    public Object initialize(@Valid @RequestBody PaymentInitializeRequest request) {
+        var user = currentUser.require();
+        return billingService.initializePayment(user.userId(), request.getEmail(), request.getPlan());
+    }
+
+    @GetMapping("/api/payments/verify/{reference}")
+    public Object verify(@PathVariable String reference) {
+        return billingService.verifyPayment(currentUser.require().userId(), reference);
+    }
+}

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   getPosterUrl,
   getTrendingMovies,
-} from "../services/tmdbService";
+} from "../services/movieService";
 
 export default function Trending() {
   const [movies, setMovies] = useState([]);

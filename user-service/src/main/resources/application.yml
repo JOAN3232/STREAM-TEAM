@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: user-service
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/streamteam}
+
+server:
+  port: ${SERVER_PORT:8083}
+
+jwt:
+  secret: ${JWT_SECRET:change-this-to-a-long-random-secret-key-32b}
+
+paystack:
+  secret-key: ${PAYSTACK_SECRET_KEY:}
+  public-key: ${PAYSTACK_PUBLIC_KEY:}
+  base-url: ${PAYSTACK_BASE_URL:https://api.paystack.co}
+  callback-url: ${PAYSTACK_CALLBACK_URL:http://localhost:5173/payment}
+
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:4173}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

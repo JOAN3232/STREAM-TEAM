@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { getMediaDetails } from "../services/tmdbService";
+import WatchPlayer from "../components/WatchPlayer";
+import { addHistoryEntry } from "../services/historyService";
+import { getMediaDetails, getMovieVideos } from "../services/movieService";
 
 export default function Player() {
   const navigate = useNavigate();
   const { id, mediaType = "movie" } = useParams();
 
   const [movie, setMovie] = useState(null);
-  const [trailerKey, setTrailerKey] = useState(null);
+  const [playback, setPlayback] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -18,40 +20,18 @@ export default function Player() {
         setLoading(true);
         setError("");
 
-        const details = await getMediaDetails(mediaType, id);
+        const [details, video] = await Promise.all([
+          getMediaDetails(mediaType, id),
+          getMovieVideos(id),
+        ]);
 
         setMovie(details);
+        setPlayback(video);
 
-        const youtubeVideos =
-          details?.videos?.results?.filter(
-            (video) =>
-              video.site === "YouTube" &&
-              video.key
-          ) || [];
-
-        // Prefer an official trailer.
-        const trailer =
-          youtubeVideos.find(
-            (video) =>
-              video.type === "Trailer" &&
-              video.official
-          ) ||
-          youtubeVideos.find(
-            (video) =>
-              video.type === "Trailer"
-          ) ||
-          youtubeVideos.find(
-            (video) =>
-              video.type === "Teaser"
-          ) ||
-          youtubeVideos[0];
-
-        if (trailer) {
-          setTrailerKey(trailer.key);
-        } else {
-          setError(
-            "No official trailer is available for this title."
-          );
+        try {
+          await addHistoryEntry(Number(id), 0);
+        } catch (historyError) {
+          console.warn("Could not save watch history", historyError);
         }
       } catch (err) {
         console.error(
@@ -90,14 +70,12 @@ export default function Player() {
           TRAILER
       ======================================= */}
 
-      {trailerKey ? (
-        <iframe
-          src={`https://www.youtube-nocookie.com/embed/${trailerKey}?autoplay=1&rel=0&modestbranding=1`}
-          title={`${movie?.title || movie?.name || "STREAM"} trailer`}
-          allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-          allowFullScreen
-          referrerPolicy="strict-origin-when-cross-origin"
-          className="absolute inset-0 h-full w-full border-0 bg-black"
+      {playback ? (
+        <WatchPlayer
+          provider={playback.provider}
+          videoId={playback.videoId}
+          embedUrl={playback.embedUrl}
+          title={`${movie?.title || movie?.name || "STREAM"} player`}
         />
       ) : (
         <div className="absolute inset-0 flex items-center justify-center bg-black px-6">
@@ -118,7 +96,7 @@ export default function Player() {
 
             <p className="mt-2 text-sm leading-6 text-white/40">
               {error ||
-                "We couldn't find an official trailer for this movie."}
+                "We couldn't find a playable video for this title."}
             </p>
 
             <button
@@ -157,7 +135,7 @@ export default function Player() {
 
       <div className="pointer-events-none absolute left-[80px] top-5 z-30 hidden sm:block">
         <p className="text-[8px] font-semibold uppercase tracking-[0.3em] text-violet-300">
-          Official Trailer
+          Now Watching
         </p>
 
         <h1
