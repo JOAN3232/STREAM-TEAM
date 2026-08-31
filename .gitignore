@@ -1,0 +1,29 @@
+# Environment and secrets
+.env
+.env.local
+.env.*
+!.env.example
+**/.env
+!**/.env.example
+
+# Frontend
+node_modules/
+frontend/node_modules/
+frontend/dist/
+dist/
+
+# Java / Maven
+target/
+**/target/
+.mvn/wrapper/maven-wrapper.jar
+
+# Logs and OS
+*.log
+.DS_Store
+Thumbs.db
+
+# Editors
+.idea/
+*.iml
+.vscode/
+.cursor/
