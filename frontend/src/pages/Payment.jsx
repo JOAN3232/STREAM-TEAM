@@ -157,7 +157,7 @@ export default function Payment() {
                   type="text"
                   name="cvv"
                   value={form.cvv}
-                  onChange={handleChange}
+                  onChange={handleChange}x
                   placeholder="1234"
                   maxLength={4}
                   className="w-full bg-black/40 border border-white/10 rounded-md px-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-[#8b5cf6] transition-colors"

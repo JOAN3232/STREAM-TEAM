@@ -87,7 +87,17 @@ export default function App() {
         />
 
         <Route
+          path="/title/:mediaType/:id"
+          element={<MovieDetails />}
+        />
+
+        <Route
           path="/watch/movie/:id"
+          element={<Player />}
+        />
+
+        <Route
+          path="/watch/:mediaType/:id"
           element={<Player />}
         />
       </Routes>

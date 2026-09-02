@@ -281,7 +281,7 @@ export default function VerifyEmail() {
       </section>
 
       {/* BOTTOM GLOW */}
-      <div className="pointer-events-none fixed bottom-0 left-0 right-0 z-20 h-[2px] bg-gradient-to-r from-transparent via-violet-500 to-transparent shadow-[0_-8px_35px_rgba(168,85,247,0.55)]" />
+      <div className="pointer-events-none fixed bottom-0 left-0 right-0 z-20 h-[2px] bg-gradient-to-r from-transparent via-violet-500 to-transparent shadow-[0_-8px_35px_rgba(168,85,287,0.55)]" />
     </main>
   );
 }
