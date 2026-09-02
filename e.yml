@@ -1,0 +1,11 @@
+[33m8ab5204[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mpraise-update[m[33m)[m what i just did
+[33m69a331d[m[33m ([m[1;31morigin/praise-update[m[33m)[m Add Movie Service with TMDB metadata and VidSrc playback.
+[33m73e9773[m Add Set Password page and frontend auth API client.
+[33m428a420[m[33m ([m[1;31morigin/debola-auth-service[m[33m)[m auth-service: add select-plan endpoint, update Payment.jsx to save plan instead of re-registering
+[33m83e642b[m auth-service: fix email verification flow and post-login redirect
+[33m3de9e78[m merge frontend-update: keep own Payment.jsx
+[33m4677035[m auth-service:email verification flow
+[33meec1036[m[33m ([m[1;31morigin/payment-mongodb-update[m[33m, [m[1;32mpayment-mongodb-update[m[33m)[m update STREAM verification plans payment and mongodb setup
+[33m3ca6cf3[m[33m ([m[1;31morigin/frontend-update[m[33m)[m Build browse experience and movie playback
+[33m880a85e[m[33m ([m[1;31morigin/praise-update-clean[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Add onboarding pland and payment
+[33m6fb6696[m Initial STREAM frontend

@@ -9,7 +9,9 @@ Default port: `8081`
 - Register users
 - Hash passwords with BCrypt
 - Login with JWT
-- Email verification with Resend
+- README.md:47: POST /api/auth/resend-verification
+api-gateway/README.md:5: ...never TMDB, VidSrc, MongoDB, Resend, or Paystack.
+auth-service/README.md:23: POST /api/auth/resend-verification
 - Store users in MongoDB Atlas or local MongoDB
 
 ## Endpoints
@@ -60,7 +62,10 @@ mvn test
   - `MONGODB_URI`
   - `JWT_SECRET`
   - `JWT_EXPIRATION`
-  - `RESEND_API_KEY`
+  - `MAIL_HOST`
+- `MAIL_PORT`
+- `MAIL_USERNAME`
+- `MAIL_PASSWORD`
   - `MAIL_FROM`
   - `FRONTEND_URL`
   - `CORS_ALLOWED_ORIGINS`

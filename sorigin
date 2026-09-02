@@ -1,0 +1,53 @@
+[35m.env.example[m[36m:[m[32m7[m[36m:[m[1;31mCORS[m_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:4173,https://your-vercel-domain.vercel.app
+[35mREADME.md[m[36m:[m[32m139[m[36m:[m- `[1;31mCORS[m_ALLOWED_ORIGINS`
+[35mREADME.md[m[36m:[m[32m150[m[36m:[m### [1;31mCORS[m
+[35mREADME.md[m[36m:[m[32m151[m[36m:[mDo not use wildcard [1;31mCORS[m in production.
+[35mREADME.md[m[36m:[m[32m152[m[36m:[mSet `[1;31mCORS[m_ALLOWED_ORIGINS` to your local frontend URLs and Vercel production domain.
+[35mapi-gateway/.env.example[m[36m:[m[32m6[m[36m:[m[1;31mCORS[m_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:4173
+[35mapi-gateway/README.md[m[36m:[m[32m35[m[36m:[mSee `.env.example`. [1;31mCORS[m uses `[1;31mCORS[m_ALLOWED_ORIGINS` (no wildcards in production).
+[35mapi-gateway/src/main/resources/application.yml[m[36m:[m[32m6[m[36m:[m      global[1;31mcors[m:
+[35mapi-gateway/src/main/resources/application.yml[m[36m:[m[32m8[m[36m:[m        [1;31mcors[m-configurations:
+[35mapi-gateway/src/main/resources/application.yml[m[36m:[m[32m10[m[36m:[m            allowedOrigins: ${[1;31mCORS[m_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:4173}
+[35mauth-service/README.md[m[36m:[m[32m37[m[36m:[m| `[1;31mCORS[m_ALLOWED_ORIGINS` | no | Comma-separated frontend origins |
+[35mauth-service/README.md[m[36m:[m[32m66[m[36m:[m  - `[1;31mCORS[m_ALLOWED_ORIGINS`
+[35mauth-service/src/main/java/com/stream/auth/config/AppConfig.java[m[36m:[m[32m10[m[36m:[mimport org.springframework.web.servlet.config.annotation.[1;31mCors[mRegistry;
+[35mauth-service/src/main/java/com/stream/auth/config/AppConfig.java[m[36m:[m[32m15[m[36m:[m@EnableConfigurationProperties({[1;31mCors[mProperties.class, JwtProperties.class, ResendProperties.class})
+[35mauth-service/src/main/java/com/stream/auth/config/AppConfig.java[m[36m:[m[32m35[m[36m:[m    WebMvcConfigurer [1;31mcors[mConfigurer([1;31mCors[mProperties [1;31mcors[mProperties) {
+[35mauth-service/src/main/java/com/stream/auth/config/AppConfig.java[m[36m:[m[32m38[m[36m:[m            public void add[1;31mCors[mMappings([1;31mCors[mRegistry registry) {
+[35mauth-service/src/main/java/com/stream/auth/config/AppConfig.java[m[36m:[m[32m40[m[36m:[m                        .allowedOrigins([1;31mcors[mProperties.originList())
+[35mauth-service/src/main/java/com/stream/auth/config/CorsProperties.java[m[36m:[m[32m5[m[36m:[m@ConfigurationProperties(prefix = "[1;31mcors[m")
+[35mauth-service/src/main/java/com/stream/auth/config/CorsProperties.java[m[36m:[m[32m6[m[36m:[mpublic class [1;31mCors[mProperties {
+[35mauth-service/src/main/java/com/stream/auth/config/SecurityConfig.java[m[36m:[m[32m17[m[36m:[m                .[1;31mcors[m(Customizer.withDefaults())
+[35mauth-service/src/main/resources/application.yml[m[36m:[m[32m20[m[36m:[m[1;31mcors[m:
+[35mauth-service/src/main/resources/application.yml[m[36m:[m[32m21[m[36m:[m  allowed-origins: ${[1;31mCORS[m_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:4173}
+[35mdocker-compose.yml[m[36m:[m[32m22[m[36m:[m      [1;31mCORS[m_ALLOWED_ORIGINS: ${[1;31mCORS[m_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:4173}
+[35mdocker-compose.yml[m[36m:[m[32m37[m[36m:[m      [1;31mCORS[m_ALLOWED_ORIGINS: ${[1;31mCORS[m_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:4173}
+[35mdocker-compose.yml[m[36m:[m[32m52[m[36m:[m      [1;31mCORS[m_ALLOWED_ORIGINS: ${[1;31mCORS[m_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:4173}
+[35mdocker-compose.yml[m[36m:[m[32m64[m[36m:[m      [1;31mCORS[m_ALLOWED_ORIGINS: ${[1;31mCORS[m_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:4173}
+[35mmovie-service/.env.example[m[36m:[m[32m6[m[36m:[m[1;31mCORS[m_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:4173
+[35mmovie-service/README.md[m[36m:[m[32m66[m[36m:[m| `[1;31mCORS[m_ALLOWED_ORIGINS` | no | Comma-separated origins |
+[35mmovie-service/src/main/java/com/stream/movie/config/AppConfig.java[m[36m:[m[32m9[m[36m:[mimport org.springframework.web.servlet.config.annotation.[1;31mCors[mRegistry;
+[35mmovie-service/src/main/java/com/stream/movie/config/AppConfig.java[m[36m:[m[32m13[m[36m:[m@EnableConfigurationProperties({TmdbProperties.class, [1;31mCors[mProperties.class, VidSrcProperties.class})
+[35mmovie-service/src/main/java/com/stream/movie/config/AppConfig.java[m[36m:[m[32m35[m[36m:[m    WebMvcConfigurer [1;31mcors[mConfigurer([1;31mCors[mProperties [1;31mcors[mProperties) {
+[35mmovie-service/src/main/java/com/stream/movie/config/AppConfig.java[m[36m:[m[32m38[m[36m:[m            public void add[1;31mCors[mMappings([1;31mCors[mRegistry registry) {
+[35mmovie-service/src/main/java/com/stream/movie/config/AppConfig.java[m[36m:[m[32m40[m[36m:[m                        .allowedOrigins([1;31mcors[mProperties.originList())
+[35mmovie-service/src/main/java/com/stream/movie/config/CorsProperties.java[m[36m:[m[32m5[m[36m:[m@ConfigurationProperties(prefix = "[1;31mcors[m")
+[35mmovie-service/src/main/java/com/stream/movie/config/CorsProperties.java[m[36m:[m[32m6[m[36m:[mpublic class [1;31mCors[mProperties {
+[35mmovie-service/src/main/resources/application.yml[m[36m:[m[32m19[m[36m:[m[1;31mcors[m:
+[35mmovie-service/src/main/resources/application.yml[m[36m:[m[32m20[m[36m:[m  allowed-origins: ${[1;31mCORS[m_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:4173}
+[35mmovie-service/src/test/java/com/stream/movie/MovieTrendingEndpointTest.java[m[36m:[m[32m52[m[36m:[m        registry.add("[1;31mcors[m.allowed-origins", () -> "http://localhost:5173");
+[35muser-service/README.md[m[36m:[m[32m42[m[36m:[m| `[1;31mCORS[m_ALLOWED_ORIGINS` | no | Comma-separated frontend origins |
+[35muser-service/README.md[m[36m:[m[32m71[m[36m:[m  - `[1;31mCORS[m_ALLOWED_ORIGINS`
+[35muser-service/src/main/java/com/stream/user/UserServiceApplication.java[m[36m:[m[32m3[m[36m:[mimport com.stream.user.config.[1;31mCors[mProperties;
+[35muser-service/src/main/java/com/stream/user/UserServiceApplication.java[m[36m:[m[32m11[m[36m:[m@EnableConfigurationProperties({[1;31mCors[mProperties.class, JwtProperties.class, PaystackProperties.class})
+[35muser-service/src/main/java/com/stream/user/config/CorsProperties.java[m[36m:[m[32m8[m[36m:[m@ConfigurationProperties(prefix = "[1;31mcors[m")
+[35muser-service/src/main/java/com/stream/user/config/CorsProperties.java[m[36m:[m[32m9[m[36m:[mpublic class [1;31mCors[mProperties {
+[35muser-service/src/main/java/com/stream/user/config/SecurityConfig.java[m[36m:[m[32m26[m[36m:[m                .[1;31mcors[m([1;31mcors[m -> {})
+[35muser-service/src/main/java/com/stream/user/config/WebConfig.java[m[36m:[m[32m4[m[36m:[mimport org.springframework.web.servlet.config.annotation.[1;31mCors[mRegistry;
+[35muser-service/src/main/java/com/stream/user/config/WebConfig.java[m[36m:[m[32m10[m[36m:[m    private final [1;31mCors[mProperties [1;31mcors[mProperties;
+[35muser-service/src/main/java/com/stream/user/config/WebConfig.java[m[36m:[m[32m12[m[36m:[m    public WebConfig([1;31mCors[mProperties [1;31mcors[mProperties) {
+[35muser-service/src/main/java/com/stream/user/config/WebConfig.java[m[36m:[m[32m13[m[36m:[m        this.[1;31mcors[mProperties = [1;31mcors[mProperties;
+[35muser-service/src/main/java/com/stream/user/config/WebConfig.java[m[36m:[m[32m17[m[36m:[m    public void add[1;31mCors[mMappings([1;31mCors[mRegistry registry) {
+[35muser-service/src/main/java/com/stream/user/config/WebConfig.java[m[36m:[m[32m19[m[36m:[m                .allowedOrigins([1;31mcors[mProperties.getAllowedOrigins().toArray(String[]::new))
+[35muser-service/src/main/resources/application.yml[m[36m:[m[32m20[m[36m:[m[1;31mcors[m:
+[35muser-service/src/main/resources/application.yml[m[36m:[m[32m21[m[36m:[m  allowed-origins: ${[1;31mCORS[m_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:4173}

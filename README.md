@@ -69,7 +69,7 @@ Never commit:
 - MongoDB credentials
 - JWT secrets
 - TMDB credentials
-- Resend API keys
+- Gmail SMTP credentials
 - Paystack secret keys
 
 ## Local development
@@ -140,7 +140,10 @@ Required backend environment variables depend on the service, but at minimum con
 - `JWT_SECRET`
 - `MONGODB_URI`
 - `TMDB_API_KEY` or `TMDB_READ_ACCESS_KEY`
-- `RESEND_API_KEY`
+- `MAIL_HOST`
+- `MAIL_PORT`
+- `MAIL_USERNAME`
+- `MAIL_PASSWORD`
 - `PAYSTACK_SECRET_KEY`
 - `PAYSTACK_PUBLIC_KEY`
 - `PAYSTACK_CALLBACK_URL`

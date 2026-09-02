@@ -6,8 +6,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
 @EnableConfigurationProperties({TmdbProperties.class, CorsProperties.class, VidSrcProperties.class})
@@ -29,19 +27,5 @@ public class AppConfig {
         }
 
         return builder.build();
-    }
-
-    @Bean
-    WebMvcConfigurer corsConfigurer(CorsProperties corsProperties) {
-        return new WebMvcConfigurer() {
-            @Override
-            public void addCorsMappings(CorsRegistry registry) {
-                registry.addMapping("/api/**")
-                        .allowedOrigins(corsProperties.originList())
-                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                        .allowedHeaders("*")
-                        .allowCredentials(true);
-            }
-        };
     }
 }
