@@ -3,12 +3,9 @@ package com.stream.movie.dto.tmdb;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.Collections;
-import java.util.List;
-
 @JsonIgnoreProperties(ignoreUnknown = true)
-public record TmdbSeasonDetails(
-        int id,
+public record TmdbSeasonSummary(
+        long id,
 
         String name,
 
@@ -17,21 +14,13 @@ public record TmdbSeasonDetails(
         @JsonProperty("season_number")
         int seasonNumber,
 
+        @JsonProperty("episode_count")
+        int episodeCount,
+
         @JsonProperty("poster_path")
         String posterPath,
 
         @JsonProperty("air_date")
-        String airDate,
-
-        @JsonProperty("episode_count")
-        int episodeCount,
-
-        List<TmdbEpisode> episodes
+        String airDate
 ) {
-
-    public List<TmdbEpisode> safeEpisodes() {
-        return episodes == null
-                ? Collections.emptyList()
-                : episodes;
-    }
 }

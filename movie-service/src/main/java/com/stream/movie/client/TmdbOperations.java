@@ -6,11 +6,17 @@ import com.stream.movie.dto.tmdb.TmdbSeasonDetails;
 
 public interface TmdbOperations {
 
+    // =========================
+    // MOVIES
+    // =========================
+
     TmdbPagedResponse getTrendingMovies();
 
     TmdbPagedResponse getPopularMovies();
 
     TmdbPagedResponse searchMovies(String query);
+
+    TmdbPagedResponse searchMovies(String query, int page);
 
     TmdbPagedResponse getTopRatedMovies();
 
@@ -22,8 +28,26 @@ public interface TmdbOperations {
 
     TmdbMovieDetails getMovie(long tmdbId);
 
+    // =========================
     // TV
+    // =========================
+
+    TmdbPagedResponse getPopularTv();
+
+    TmdbPagedResponse searchTv(String query);
+
+    TmdbPagedResponse searchTv(String query, int page);
+
     TmdbMovieDetails getTv(long tmdbId);
 
-    TmdbSeasonDetails getTvSeason(long tmdbId, int seasonNumber);
+    TmdbSeasonDetails getTvSeason(
+            long tmdbId,
+            int seasonNumber
+    );
+
+    TmdbMovieDetails getTvEpisode(
+            long tmdbId,
+            int seasonNumber,
+            int episodeNumber
+    );
 }

@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -41,6 +42,16 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleTimeout(ResourceAccessException ex, HttpServletRequest request) {
         log.warn("External API timeout on {}", request.getRequestURI(), ex);
         return toResponse(HttpStatus.GATEWAY_TIMEOUT, "External API timed out. Please try again.", request.getRequestURI());
+    }
+
+    @ExceptionHandler(DataAccessException.class)
+    public ResponseEntity<ApiError> handleDataAccess(DataAccessException ex, HttpServletRequest request) {
+        log.error("Database error on {}", request.getRequestURI(), ex);
+        return toResponse(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                "Database is unavailable. Check that local MongoDB is running.",
+                request.getRequestURI()
+        );
     }
 
     @ExceptionHandler(Exception.class)

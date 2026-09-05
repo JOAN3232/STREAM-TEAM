@@ -10,14 +10,15 @@ import com.stream.movie.exception.TmdbException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.URI;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.util.UriComponentsBuilder;
+
+import java.net.URI;
+import java.util.Map;
 
 @Component
 public class TmdbClient implements TmdbOperations {
@@ -30,70 +31,90 @@ public class TmdbClient implements TmdbOperations {
 
     public TmdbClient(
             RestClient tmdbRestClient,
-            TmdbProperties properties) {
-
+            TmdbProperties properties
+    ) {
         this.restClient = tmdbRestClient;
         this.properties = properties;
     }
 
-    // =========================
+    // =========================================================
     // MOVIES
-    // =========================
+    // =========================================================
 
     @Override
     public TmdbPagedResponse getTrendingMovies() {
+
         return get(
                 "/trending/movie/week",
                 TmdbPagedResponse.class,
-                java.util.Map.of()
+                Map.of()
         );
     }
 
     @Override
     public TmdbPagedResponse getPopularMovies() {
+
         return get(
                 "/movie/popular",
                 TmdbPagedResponse.class,
-                java.util.Map.of("page", "1")
+                Map.of("page", "1")
         );
     }
 
     @Override
     public TmdbPagedResponse searchMovies(String query) {
+
+        return searchMovies(query, 1);
+    }
+
+    @Override
+    public TmdbPagedResponse searchMovies(
+            String query,
+            int page
+    ) {
+
+        validatePage(page);
+
         return get(
                 "/search/movie",
                 TmdbPagedResponse.class,
-                java.util.Map.of(
+                Map.of(
                         "query", query,
-                        "page", "1"
+                        "page", String.valueOf(page),
+                        "include_adult", "false"
                 )
         );
     }
 
     @Override
     public TmdbPagedResponse getTopRatedMovies() {
+
         return get(
                 "/movie/top_rated",
                 TmdbPagedResponse.class,
-                java.util.Map.of("page", "1")
+                Map.of("page", "1")
         );
     }
 
     @Override
     public TmdbPagedResponse getNowPlayingMovies() {
+
         return get(
                 "/movie/now_playing",
                 TmdbPagedResponse.class,
-                java.util.Map.of("page", "1")
+                Map.of("page", "1")
         );
     }
 
     @Override
-    public TmdbPagedResponse discoverByGenre(int genreId) {
+    public TmdbPagedResponse discoverByGenre(
+            int genreId
+    ) {
+
         return get(
                 "/discover/movie",
                 TmdbPagedResponse.class,
-                java.util.Map.of(
+                Map.of(
                         "sort_by", "popularity.desc",
                         "with_genres", String.valueOf(genreId),
                         "page", "1"
@@ -102,50 +123,104 @@ public class TmdbClient implements TmdbOperations {
     }
 
     @Override
-    public TmdbPagedResponse getRecommendations(long tmdbId) {
+    public TmdbPagedResponse getRecommendations(
+            long tmdbId
+    ) {
+
+        validateId(tmdbId, "Movie");
+
         return get(
                 "/movie/" + tmdbId + "/recommendations",
                 TmdbPagedResponse.class,
-                java.util.Map.of("page", "1")
+                Map.of("page", "1")
         );
     }
 
     @Override
-    public TmdbMovieDetails getMovie(long tmdbId) {
+    public TmdbMovieDetails getMovie(
+            long tmdbId
+    ) {
 
         validateId(tmdbId, "Movie");
 
         return get(
                 "/movie/" + tmdbId,
                 TmdbMovieDetails.class,
-                java.util.Map.of()
+                Map.of(
+                        "append_to_response",
+                        "credits,videos,recommendations"
+                )
         );
     }
 
-    // =========================
-    // TV SERIES
-    // =========================
+    // =========================================================
+    // TV
+    // =========================================================
 
     @Override
-    public TmdbMovieDetails getTv(long tmdbId) {
+    public TmdbPagedResponse getPopularTv() {
+
+        return get(
+                "/tv/popular",
+                TmdbPagedResponse.class,
+                Map.of("page", "1")
+        );
+    }
+
+    @Override
+    public TmdbPagedResponse searchTv(
+            String query
+    ) {
+
+        return searchTv(query, 1);
+    }
+
+    @Override
+    public TmdbPagedResponse searchTv(
+            String query,
+            int page
+    ) {
+
+        validatePage(page);
+
+        return get(
+                "/search/tv",
+                TmdbPagedResponse.class,
+                Map.of(
+                        "query", query,
+                        "page", String.valueOf(page),
+                        "include_adult", "false"
+                )
+        );
+    }
+
+    @Override
+    public TmdbMovieDetails getTv(
+            long tmdbId
+    ) {
 
         validateId(tmdbId, "TV");
 
         return get(
                 "/tv/" + tmdbId,
                 TmdbMovieDetails.class,
-                java.util.Map.of()
+                Map.of(
+                        "append_to_response",
+                        "credits,videos,recommendations"
+                )
         );
     }
 
     @Override
     public TmdbSeasonDetails getTvSeason(
             long tmdbId,
-            int seasonNumber) {
+            int seasonNumber
+    ) {
 
         validateId(tmdbId, "TV");
 
         if (seasonNumber < 0) {
+
             throw new ApiException(
                     HttpStatus.BAD_REQUEST,
                     "Season number cannot be negative."
@@ -153,19 +228,63 @@ public class TmdbClient implements TmdbOperations {
         }
 
         return get(
-                "/tv/" + tmdbId + "/season/" + seasonNumber,
+                "/tv/"
+                        + tmdbId
+                        + "/season/"
+                        + seasonNumber,
                 TmdbSeasonDetails.class,
-                java.util.Map.of()
+                Map.of()
         );
     }
 
-    // =========================
-    // HELPERS
-    // =========================
+    @Override
+    public TmdbMovieDetails getTvEpisode(
+            long tmdbId,
+            int seasonNumber,
+            int episodeNumber
+    ) {
 
-    private void validateId(long id, String type) {
+        validateId(tmdbId, "TV");
+
+        if (seasonNumber < 0) {
+
+            throw new ApiException(
+                    HttpStatus.BAD_REQUEST,
+                    "Season number cannot be negative."
+            );
+        }
+
+        if (episodeNumber <= 0) {
+
+            throw new ApiException(
+                    HttpStatus.BAD_REQUEST,
+                    "Episode number must be positive."
+            );
+        }
+
+        return get(
+                "/tv/"
+                        + tmdbId
+                        + "/season/"
+                        + seasonNumber
+                        + "/episode/"
+                        + episodeNumber,
+                TmdbMovieDetails.class,
+                Map.of()
+        );
+    }
+
+    // =========================================================
+    // VALIDATION
+    // =========================================================
+
+    private void validateId(
+            long id,
+            String type
+    ) {
 
         if (id <= 0) {
+
             throw new ApiException(
                     HttpStatus.BAD_REQUEST,
                     type + " id must be a positive TMDB id."
@@ -173,16 +292,43 @@ public class TmdbClient implements TmdbOperations {
         }
     }
 
+    private void validatePage(
+            int page
+    ) {
+
+        if (page <= 0) {
+
+            throw new ApiException(
+                    HttpStatus.BAD_REQUEST,
+                    "Page must be greater than zero."
+            );
+        }
+
+        if (page > 500) {
+
+            throw new ApiException(
+                    HttpStatus.BAD_REQUEST,
+                    "Page cannot be greater than 500."
+            );
+        }
+    }
+
+    // =========================================================
+    // HTTP
+    // =========================================================
+
     private <T> T get(
             String path,
             Class<T> type,
-            java.util.Map<String, String> extraQuery) {
+            Map<String, String> extraQuery
+    ) {
 
         if (!properties.hasCredentials()) {
+
             throw new ApiException(
                     HttpStatus.SERVICE_UNAVAILABLE,
-                    "TMDB credentials are not configured. " +
-                    "Set TMDB_API_KEY or TMDB_READ_ACCESS_KEY."
+                    "TMDB credentials are not configured. "
+                            + "Set TMDB_API_KEY or TMDB_READ_ACCESS_KEY."
             );
         }
 
@@ -190,14 +336,32 @@ public class TmdbClient implements TmdbOperations {
 
             UriComponentsBuilder builder =
                     UriComponentsBuilder
-                            .fromUriString(properties.getBaseUrl())
+                            .fromUriString(
+                                    properties.getBaseUrl()
+                            )
                             .path(path)
-                            .queryParam("language", "en-US");
+                            .queryParam(
+                                    "language",
+                                    "en-US"
+                            );
 
-            extraQuery.forEach(builder::queryParam);
+            extraQuery.forEach(
+                    builder::queryParam
+            );
 
-            if (properties.getReadAccessKey() == null
-                    || properties.getReadAccessKey().isBlank()) {
+            /*
+             * If a v4 Read Access Token exists,
+             * the RestClient configuration can handle
+             * authentication through its interceptor.
+             *
+             * Otherwise use the v3 api_key.
+             */
+            if (
+                    properties.getReadAccessKey() == null
+                            || properties
+                            .getReadAccessKey()
+                            .isBlank()
+            ) {
 
                 builder.queryParam(
                         "api_key",
@@ -205,10 +369,11 @@ public class TmdbClient implements TmdbOperations {
                 );
             }
 
-            URI uri = builder
-                    .encode()
-                    .build()
-                    .toUri();
+            URI uri =
+                    builder
+                            .encode()
+                            .build()
+                            .toUri();
 
             return restClient
                     .get()
@@ -216,7 +381,9 @@ public class TmdbClient implements TmdbOperations {
                     .retrieve()
 
                     .onStatus(
-                            status -> status.value() == 404,
+                            status ->
+                                    status.value() == 404,
+
                             (request, response) -> {
 
                                 throw new ApiException(
@@ -228,6 +395,7 @@ public class TmdbClient implements TmdbOperations {
 
                     .onStatus(
                             HttpStatusCode::isError,
+
                             (request, response) -> {
 
                                 throw new TmdbException(

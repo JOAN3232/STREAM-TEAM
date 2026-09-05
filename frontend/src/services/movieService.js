@@ -1,4 +1,3 @@
-
 import apiClient from "./apiClient";
 
 const IMAGE_BASE_URL = "https://image.tmdb.org/t/p";
@@ -7,70 +6,132 @@ const IMAGE_BASE_URL = "https://image.tmdb.org/t/p";
    NORMALIZATION
 ========================================================= */
 
-const normalizeMovie = (movie = {}) => ({
-  ...movie,
+const normalizeMovie = (movie = {}) => {
 
-  id: movie.id,
-
-  title: movie.title || movie.name || "Untitled",
-
-  vote_average:
-    movie.rating ??
-    movie.vote_average ??
-    0,
-
-  release_date:
-    movie.releaseDate ||
-    movie.release_date ||
-    movie.first_air_date ||
-    "",
-
-  poster_path:
-    movie.poster_path ||
-    (movie.posterUrl
-      ? movie.posterUrl.replace(`${IMAGE_BASE_URL}/w500`, "")
-      : null),
-
-  backdrop_path:
-    movie.backdrop_path ||
-    (movie.backdropUrl
-      ? movie.backdropUrl.replace(`${IMAGE_BASE_URL}/original`, "")
-      : null),
-
-  media_type:
+  const mediaType =
+    movie.mediaType ||
     movie.media_type ||
-    (movie.first_air_date ? "tv" : "movie"),
-});
+    (
+      movie.first_air_date ||
+      movie.firstAirDate ||
+      (
+        movie.name &&
+        !movie.title
+      )
+        ? "tv"
+        : "movie"
+    );
 
-const normalizeList = (items = []) =>
-  Array.isArray(items)
-    ? items.map(normalizeMovie)
-    : [];
+  return {
+    ...movie,
+
+    title:
+      movie.title ||
+      movie.name ||
+      "Untitled",
+
+    name:
+      movie.name ||
+      movie.title ||
+      "Untitled",
+
+    vote_average:
+      movie.rating ??
+      movie.vote_average ??
+      0,
+
+    release_date:
+      movie.releaseDate ||
+      movie.release_date ||
+      "",
+
+    first_air_date:
+      movie.firstAirDate ||
+      movie.first_air_date ||
+      "",
+
+    poster_path:
+      movie.poster_path ||
+      movie.posterPath ||
+      (
+        movie.posterUrl
+          ? movie.posterUrl.replace(
+              `${IMAGE_BASE_URL}/w500`,
+              ""
+            )
+          : null
+      ),
+
+    backdrop_path:
+      movie.backdrop_path ||
+      movie.backdropPath ||
+      (
+        movie.backdropUrl
+          ? movie.backdropUrl.replace(
+              `${IMAGE_BASE_URL}/original`,
+              ""
+            )
+          : null
+      ),
+
+    media_type:
+      mediaType,
+  };
+};
+
+const normalizeList = (
+  items = []
+) => {
+
+  return items.map(
+    normalizeMovie
+  );
+};
 
 /* =========================================================
-   IMAGE HELPERS
+   IMAGES
 ========================================================= */
 
-export const getPosterUrl = (posterPath) => {
-  if (!posterPath) return null;
+export const getPosterUrl = (
+  posterPath
+) => {
+
+  if (!posterPath) {
+    return null;
+  }
 
   if (
-    posterPath.startsWith("http://") ||
-    posterPath.startsWith("https://")
+    posterPath.startsWith(
+      "http://"
+    ) ||
+    posterPath.startsWith(
+      "https://"
+    )
   ) {
+
     return posterPath;
   }
 
   return `${IMAGE_BASE_URL}/w500${posterPath}`;
 };
 
-export const getBackdropUrl = (backdropPath) => {
-  if (!backdropPath) return null;
+export const getBackdropUrl = (
+  backdropPath
+) => {
+
+  if (!backdropPath) {
+    return null;
+  }
 
   if (
-    backdropPath.startsWith("http://") ||
-    backdropPath.startsWith("https://")
+    backdropPath.startsWith(
+      "http://"
+    ) ||
+    backdropPath.startsWith(
+      "https://"
+    )
   ) {
+
     return backdropPath;
   }
 
@@ -82,41 +143,35 @@ export const getBackdropUrl = (backdropPath) => {
 ========================================================= */
 
 export async function getTrendingMovies() {
-  const { data } = await apiClient.get(
-    "/api/movies/trending"
-  );
+
+  const { data } =
+    await apiClient.get(
+      "/api/movies/trending"
+    );
 
   return normalizeList(data);
 }
 
 export async function getPopularMovies() {
-  const { data } = await apiClient.get(
-    "/api/movies/popular"
-  );
+
+  const { data } =
+    await apiClient.get(
+      "/api/movies/popular"
+    );
 
   return normalizeList(data);
 }
 
-export async function getMovieDetails(movieId) {
-  const { data } = await apiClient.get(
-    `/api/movies/${movieId}`
-  );
+/* =========================================================
+   TV
+========================================================= */
 
-  return normalizeMovie(data);
-}
+export async function getPopularTVShows() {
 
-export async function getMovieVideos(movieId) {
-  const { data } = await apiClient.get(
-    `/api/movies/${movieId}/videos`
-  );
-
-  return data;
-}
-
-export async function getMovieRecommendations(movieId) {
-  const { data } = await apiClient.get(
-    `/api/movies/${movieId}/recommendations`
-  );
+  const { data } =
+    await apiClient.get(
+      "/api/movies/tv/popular"
+    );
 
   return normalizeList(data);
 }
@@ -125,187 +180,211 @@ export async function getMovieRecommendations(movieId) {
    SEARCH
 ========================================================= */
 
-export async function searchMovies(query, page = 1) {
-  const cleanQuery = query?.trim();
+/*
+ * type:
+ *
+ * all
+ * movie
+ * tv
+ *
+ * Backend returns:
+ *
+ * {
+ *   results: [],
+ *   page: 1,
+ *   totalPages: 20,
+ *   totalResults: 1000
+ * }
+ */
 
-  if (!cleanQuery) {
+export async function searchMovies(
+  query,
+  page = 1,
+  type = "all"
+) {
+
+  if (!query?.trim()) {
+
     return {
       results: [],
       page: 1,
-      totalPages: 0,
-      totalResults: 0,
+      total_pages: 0,
+      total_results: 0,
     };
   }
 
-  const { data } = await apiClient.get(
-    "/api/movies/search",
-    {
-      params: {
-        q: cleanQuery,
-        page,
-      },
-    }
-  );
+  const { data } =
+    await apiClient.get(
+      "/api/movies/search",
+      {
+        params: {
+          q: query.trim(),
+          page,
+          type,
+        },
+      }
+    );
 
-  /*
-   * Backend may return a plain array.
-   */
-  if (Array.isArray(data)) {
-    return {
-      results: normalizeList(data),
-      page,
-      totalPages: data.length >= 20 ? page + 1 : page,
-      totalResults: data.length,
-    };
-  }
-
-  /*
-   * Backend/TMDB paginated response.
-   */
   return {
-    results: normalizeList(
-      data.results ||
-      data.movies ||
-      []
-    ),
+    ...data,
+
+    results:
+      normalizeList(
+        data?.results || []
+      ),
 
     page:
-      data.page ||
+      data?.page ??
       page,
 
-    totalPages:
-      data.totalPages ??
-      data.total_pages ??
-      data.totalPagesAvailable ??
-      1,
+    total_pages:
+      data?.totalPages ??
+      data?.total_pages ??
+      0,
 
-    totalResults:
-      data.totalResults ??
-      data.total_results ??
-      data.total ??
+    total_results:
+      data?.totalResults ??
+      data?.total_results ??
       0,
   };
 }
 
 /* =========================================================
-   TV SERIES
+   MOVIE DETAILS
 ========================================================= */
 
-/**
- * Get a TV series' details.
- *
- * Backend expected:
- * GET /api/movies/tv/{tvId}
- */
-export async function getTVDetails(tvId) {
-  const { data } = await apiClient.get(
-    `/api/movies/tv/${tvId}`
-  );
+export async function getMovieDetails(
+  movieId
+) {
+
+  const { data } =
+    await apiClient.get(
+      `/api/movies/${movieId}`
+    );
+
+  return normalizeMovie(data);
+}
+
+export async function getMovieVideos(
+  movieId
+) {
+
+  const { data } =
+    await apiClient.get(
+      `/api/movies/${movieId}/videos`
+    );
 
   return data;
 }
 
-/**
- * Get a TV season.
- *
- * Backend expected:
- * GET /api/movies/tv/{tvId}/season/{seasonNumber}
- *
- * TMDB equivalent:
- * /tv/{series_id}/season/{season_number}
- */
+export async function getMovieRecommendations(
+  movieId
+) {
+
+  const { data } =
+    await apiClient.get(
+      `/api/movies/${movieId}/recommendations`
+    );
+
+  return normalizeList(data);
+}
+
+/* =========================================================
+   TV DETAILS
+========================================================= */
+
+export async function getTVDetails(
+  tvId
+) {
+
+  const { data } =
+    await apiClient.get(
+      `/api/movies/tv/${tvId}`
+    );
+
+  return {
+    ...normalizeMovie({
+      ...data,
+      media_type: "tv",
+    }),
+
+    media_type: "tv",
+
+    seasons:
+      data.seasons ||
+      [],
+
+    number_of_seasons:
+      data.number_of_seasons ||
+      0,
+
+    number_of_episodes:
+      data.number_of_episodes ||
+      0,
+
+    credits:
+      data.credits ||
+      {},
+
+    videos:
+      data.videos ||
+      {},
+
+    recommendations:
+      data.recommendations ||
+      [],
+  };
+}
+
+/* =========================================================
+   TV SEASON
+========================================================= */
+
 export async function getTVSeasonDetails(
   tvId,
   seasonNumber
 ) {
-  const { data } = await apiClient.get(
-    `/api/movies/tv/${tvId}/season/${seasonNumber}`
-  );
 
-  return data;
-}
-
-/**
- * Get a single TV episode.
- *
- * Backend expected:
- * GET /api/movies/tv/{tvId}/season/{seasonNumber}/episode/{episodeNumber}
- *
- * TMDB equivalent:
- * /tv/{series_id}/season/{season_number}/episode/{episode_number}
- */
-export async function getTVEpisodeDetails(
-  tvId,
-  seasonNumber,
-  episodeNumber
-) {
-  const { data } = await apiClient.get(
-    `/api/movies/tv/${tvId}/season/${seasonNumber}/episode/${episodeNumber}`
-  );
-
-  return data;
-}
-
-/**
- * Get videos for a TV episode.
- *
- * Backend expected:
- * GET /api/movies/tv/{tvId}/season/{seasonNumber}/episode/{episodeNumber}/videos
- */
-export async function getTVEpisodeVideos(
-  tvId,
-  seasonNumber,
-  episodeNumber
-) {
-  const { data } = await apiClient.get(
-    `/api/movies/tv/${tvId}/season/${seasonNumber}/episode/${episodeNumber}/videos`
-  );
-
-  return data;
-}
-
-/**
- * Get videos for a TV season.
- */
-export async function getTVSeasonVideos(
-  tvId,
-  seasonNumber
-) {
-  const { data } = await apiClient.get(
-    `/api/movies/tv/${tvId}/season/${seasonNumber}/videos`
-  );
+  const { data } =
+    await apiClient.get(
+      `/api/movies/tv/${tvId}/season/${seasonNumber}`
+    );
 
   return data;
 }
 
 /* =========================================================
-   GENERIC MEDIA HELPERS
+   TV EPISODE
 ========================================================= */
 
-export async function getMediaDetails(
-  mediaType,
-  id
+export async function getTVEpisodeDetails(
+  tvId,
+  seasonNumber,
+  episodeNumber
 ) {
-  if (mediaType === "tv") {
-    return getTVDetails(id);
-  }
 
-  return getMovieDetails(id);
+  const { data } =
+    await apiClient.get(
+      `/api/movies/tv/${tvId}/season/${seasonNumber}/episode/${episodeNumber}`
+    );
+
+  return data;
 }
 
-export async function getMediaRecommendations(
-  mediaType,
-  id
-) {
-  if (mediaType === "tv") {
-    /*
-     * If your backend later exposes TV recommendations,
-     * this can be changed to that endpoint.
-     */
-    return [];
-  }
+/* =========================================================
+   TV RECOMMENDATIONS
+========================================================= */
 
-  return getMovieRecommendations(id);
+export async function getTVRecommendations(
+  tvId
+) {
+
+  const { data } =
+    await apiClient.get(
+      `/api/movies/tv/${tvId}/recommendations`
+    );
+
+  return normalizeList(data || []);
 }
 
 /* =========================================================
@@ -313,28 +392,79 @@ export async function getMediaRecommendations(
 ========================================================= */
 
 export async function getBrowseContent() {
+
   const [
     trending,
     popular,
+    tv,
   ] = await Promise.all([
+
     getTrendingMovies(),
+
     getPopularMovies(),
+
+    getPopularTVShows(),
   ]);
 
   return {
+
     trending,
+
     popular,
 
-    topRated: popular,
+    topRated:
+      popular,
 
-    movies: trending,
+    movies:
+      popular,
 
-    tv: [],
+    tv,
 
-    action: trending,
+    action:
+      trending,
 
-    comedy: popular,
+    comedy:
+      popular,
 
-    drama: trending,
+    drama:
+      trending,
   };
+}
+
+/* =========================================================
+   UNIVERSAL DETAILS
+========================================================= */
+
+export async function getMediaDetails(
+  mediaType,
+  id
+) {
+
+  if (
+    mediaType === "tv"
+  ) {
+
+    return getTVDetails(id);
+  }
+
+  return getMovieDetails(id);
+}
+
+/* =========================================================
+   UNIVERSAL RECOMMENDATIONS
+========================================================= */
+
+export async function getMediaRecommendations(
+  mediaType,
+  id
+) {
+
+  if (
+    mediaType === "tv"
+  ) {
+
+    return getTVRecommendations(id);
+  }
+
+  return getMovieRecommendations(id);
 }
