@@ -1,12 +1,18 @@
 FROM maven:3.9.9-eclipse-temurin-21 AS build
+
 WORKDIR /app
+
 COPY pom.xml .
-COPY .mvn ./.mvn
-COPY mvnw mvnw
 COPY src ./src
-RUN chmod +x mvnw && ./mvnw -q -Dmaven.test.skip=true package
-FROM eclipse-temurin:21-jre
+
+RUN mvn -q -Dmaven.test.skip=true package
+
+FROM eclipse-temurin:21-jre-alpine
+
 WORKDIR /app
+
 COPY --from=build /app/target/movie-service-0.0.1-SNAPSHOT.jar app.jar
+
 EXPOSE 8082
-ENTRYPOINT ["java","-jar","/app/app.jar"]
+
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]

@@ -1,0 +1,64 @@
+services:
+
+  mongodb:
+    image: mongo:7
+    container_name: stream-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - stream_mongodb_data:/data/db
+
+  backend:
+    build:
+      context: ./backend/backend
+    container_name: stream-backend
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      MONGODB_URI: mongodb://mongodb:27017/stream_db
+      PAYSTACK_SECRET_KEY: ${PAYSTACK_SECRET_KEY}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_APP_PASSWORD: ${MAIL_APP_PASSWORD}
+    depends_on:
+      - mongodb
+
+  movie-service:
+    build:
+      context: ./movie-service
+    container_name: stream-movie-service
+    restart: unless-stopped
+    ports:
+      - "8082:8082"
+    environment:
+      TMDB_READ_ACCESS_KEY: ${TMDB_READ_ACCESS_KEY}
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+    container_name: stream-api-gateway
+    restart: unless-stopped
+    ports:
+      - "8084:8080"
+    environment:
+      MOVIE_SERVICE_URL: http://movie-service:8082
+      AUTH_SERVICE_URL: http://backend:8081
+      USER_SERVICE_URL: http://backend:8081
+    depends_on:
+      - movie-service
+      - backend
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: stream-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api-gateway
+      - backend
+
+volumes:
+  stream_mongodb_data:
