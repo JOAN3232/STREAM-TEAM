@@ -1,20 +1,19 @@
-FROM node:20
+FROM node:20-alpine AS build
 
 WORKDIR /app
 
-ARG VITE_TMDB_TOKEN
-ENV VITE_TMDB_TOKEN=$VITE_TMDB_TOKEN
-
 COPY package*.json ./
-
-# The lockfile was generated on Windows and can omit Linux-only
-# optional native dependencies. Regenerate dependencies inside Linux.
-
-RUN rm -f package-lock.json \
-&& npm install
+RUN npm ci
 
 COPY . .
+ARG VITE_API_GATEWAY_URL=
+ENV VITE_API_GATEWAY_URL=${VITE_API_GATEWAY_URL}
+RUN npm run build
 
-EXPOSE 5173
+FROM nginx:1.27-alpine
 
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+COPY --from=build /app/dist /usr/share/nginx/html
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]

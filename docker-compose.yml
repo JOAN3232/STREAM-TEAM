@@ -1,5 +1,4 @@
 services:
-
   mongodb:
     image: mongo:7
     container_name: stream-mongodb
@@ -17,8 +16,15 @@ services:
     ports:
       - "8081:8081"
     environment:
-      MONGODB_URI: mongodb://mongodb:27017/stream_db
+      SERVER_PORT: 8081
+      MONGODB_URI: ${MONGODB_URI:-mongodb://mongodb:27017/stream_db}
       PAYSTACK_SECRET_KEY: ${PAYSTACK_SECRET_KEY}
+      PAYSTACK_BASE_URL: ${PAYSTACK_BASE_URL:-https://api.paystack.co}
+      PAYSTACK_CALLBACK_URL: ${PAYSTACK_CALLBACK_URL}
+      APP_FRONTEND_BASE_URL: ${APP_FRONTEND_BASE_URL}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
       MAIL_USERNAME: ${MAIL_USERNAME}
       MAIL_APP_PASSWORD: ${MAIL_APP_PASSWORD}
     depends_on:
@@ -32,7 +38,13 @@ services:
     ports:
       - "8082:8082"
     environment:
+      SERVER_PORT: 8082
+      TMDB_API_KEY: ${TMDB_API_KEY:-}
       TMDB_READ_ACCESS_KEY: ${TMDB_READ_ACCESS_KEY}
+      TMDB_BASE_URL: ${TMDB_BASE_URL:-https://api.themoviedb.org/3}
+      TMDB_IMAGE_BASE_URL: ${TMDB_IMAGE_BASE_URL:-https://image.tmdb.org/t/p}
+      VIDSRC_BASE_URL: ${VIDSRC_BASE_URL:-https://vidsrcme.ru}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
 
   api-gateway:
     build:
@@ -42,9 +54,11 @@ services:
     ports:
       - "8084:8080"
     environment:
+      SERVER_PORT: 8080
       MOVIE_SERVICE_URL: http://movie-service:8082
       AUTH_SERVICE_URL: http://backend:8081
       USER_SERVICE_URL: http://backend:8081
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
     depends_on:
       - movie-service
       - backend
@@ -53,15 +67,13 @@ services:
     build:
       context: ./frontend
       args:
-        VITE_TMDB_TOKEN: ${VITE_TMDB_TOKEN}
+        VITE_API_GATEWAY_URL: ${VITE_API_GATEWAY_URL:-http://localhost:8084}
     container_name: stream-frontend
     restart: unless-stopped
     ports:
-      - "5173:5173"
+      - "5173:80"
     depends_on:
       - api-gateway
-      - backend
 
-    
 volumes:
   stream_mongodb_data:

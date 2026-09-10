@@ -1,0 +1,107 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: stream-team
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: backend
+          image: stream-team-backend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8081
+          env:
+            - name: SERVER_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: stream-team-config
+                  key: SERVER_PORT_BACKEND
+            - name: MONGODB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: stream-team-secrets
+                  key: MONGODB_URI
+            - name: PAYSTACK_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: stream-team-secrets
+                  key: PAYSTACK_SECRET_KEY
+            - name: PAYSTACK_CALLBACK_URL
+              valueFrom:
+                secretKeyRef:
+                  name: stream-team-secrets
+                  key: PAYSTACK_CALLBACK_URL
+            - name: PAYSTACK_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: stream-team-config
+                  key: PAYSTACK_BASE_URL
+            - name: APP_FRONTEND_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: stream-team-config
+                  key: APP_FRONTEND_BASE_URL
+            - name: CORS_ALLOWED_ORIGINS
+              valueFrom:
+                configMapKeyRef:
+                  name: stream-team-config
+                  key: CORS_ALLOWED_ORIGINS
+            - name: MAIL_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: stream-team-config
+                  key: MAIL_HOST
+            - name: MAIL_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: stream-team-config
+                  key: MAIL_PORT
+            - name: MAIL_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: stream-team-secrets
+                  key: MAIL_USERNAME
+            - name: MAIL_APP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: stream-team-secrets
+                  key: MAIL_APP_PASSWORD
+          readinessProbe:
+            tcpSocket:
+              port: 8081
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 8081
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 200m
+              memory: 384Mi
+            limits:
+              cpu: 1000m
+              memory: 1024Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: stream-team
+spec:
+  selector:
+    app: backend
+  ports:
+    - name: http
+      port: 8081
+      targetPort: 8081
