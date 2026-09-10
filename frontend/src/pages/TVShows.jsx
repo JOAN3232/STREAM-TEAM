@@ -9,7 +9,6 @@ import { useNavigate } from "react-router-dom";
 import StreamingLayout from "../components/StreamingLayout";
 
 import {
-  getBrowseContent,
   getPosterUrl,
   getBackdropUrl,
 } from "../services/tmdbService";
@@ -38,12 +37,7 @@ function Icon({
   const icons = {
     search: (
       <>
-        <circle
-          cx="11"
-          cy="11"
-          r="7"
-        />
-
+        <circle cx="11" cy="11" r="7" />
         <path d="m20 20-4-4" />
       </>
     ),
@@ -58,12 +52,7 @@ function Icon({
 
     info: (
       <>
-        <circle
-          cx="12"
-          cy="12"
-          r="9"
-        />
-
+        <circle cx="12" cy="12" r="9" />
         <path d="M12 11v6M12 7.5v.5" />
       </>
     ),
@@ -91,6 +80,15 @@ export default function TVShows() {
   const [shows, setShows] =
     useState([]);
 
+  const [page, setPage] =
+    useState(1);
+
+  const [totalPages, setTotalPages] =
+    useState(1);
+
+  const [loadingMore, setLoadingMore] =
+    useState(false);
+
   const [loading, setLoading] =
     useState(true);
 
@@ -103,59 +101,101 @@ export default function TVShows() {
   const [sort, setSort] =
     useState("popular");
 
-  useEffect(() => {
-    getBrowseContent()
-      .then((data) => {
-        const combined = [
-          ...(data.tv || []),
-          ...(data.popular || []),
-          ...(data.topRated || []),
-          ...(data.trending || []),
-          ...(data.drama || []),
-          ...(data.comedy || []),
-        ];
+  /* =========================================
+     LOAD TV SHOWS FROM TMDB PAGE BY PAGE
+  ========================================= */
 
-        const seen = new Set();
+  const loadShows = async (
+    pageNumber = 1
+  ) => {
+    try {
+      if (pageNumber === 1) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
 
-        const uniqueShows =
-          combined.filter((item) => {
-            if (!item?.id) {
-              return false;
-            }
+      setError("");
 
-            const isTV =
-              item.media_type === "tv" ||
-              Boolean(
-                item.first_air_date
-              ) ||
-              Boolean(item.name);
+      const response = await fetch(
+        `https://api.themoviedb.org/3/discover/tv?include_adult=false&language=en-US&page=${pageNumber}&sort_by=popularity.desc`,
+        {
+          headers: {
+            Authorization: `Bearer ${
+              import.meta.env.VITE_TMDB_TOKEN
+            }`,
+            accept: "application/json",
+          },
+        }
+      );
 
-            if (!isTV) {
+      if (!response.ok) {
+        throw new Error(
+          `TMDB request failed with status ${response.status}`
+        );
+      }
+
+      const data =
+        await response.json();
+
+      setTotalPages(
+        data.total_pages || 1
+      );
+
+      setShows((currentShows) => {
+        const combined =
+          pageNumber === 1
+            ? data.results || []
+            : [
+                ...currentShows,
+                ...(data.results || []),
+              ];
+
+        const seen =
+          new Set();
+
+        return combined.filter(
+          (show) => {
+            if (!show?.id) {
               return false;
             }
 
             if (
-              seen.has(item.id)
+              seen.has(show.id)
             ) {
               return false;
             }
 
-            seen.add(item.id);
+            seen.add(show.id);
 
             return true;
-          });
-
-        setShows(uniqueShows);
-      })
-      .catch(() => {
-        setError(
-          "STREAM could not load TV shows right now."
+          }
         );
-      })
-      .finally(() => {
-        setLoading(false);
       });
+
+      setPage(pageNumber);
+    } catch (error) {
+      console.error(
+        "Failed to load TV shows:",
+        error
+      );
+
+      setError(
+        "STREAM could not load TV shows right now."
+      );
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  useEffect(() => {
+    loadShows(1);
   }, []);
+
+  /* =========================================
+     SEARCH + SORT
+  ========================================= */
 
   const displayedShows =
     useMemo(() => {
@@ -206,6 +246,10 @@ export default function TVShows() {
       return result;
     }, [shows, query, sort]);
 
+  /* =========================================
+     INITIAL LOADING
+  ========================================= */
+
   if (loading) {
     return (
       <main className="min-h-screen bg-[#050507] text-white">
@@ -224,7 +268,9 @@ export default function TVShows() {
 
   return (
     <StreamingLayout>
-      {/* PAGE TOP */}
+      {/* =====================================
+          PAGE TOP
+      ===================================== */}
 
       <section className="px-7 pb-7 pt-[104px] sm:px-9 lg:px-12 xl:px-14">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
@@ -253,7 +299,9 @@ export default function TVShows() {
         </div>
       </section>
 
-      {/* CONTROLS */}
+      {/* =====================================
+          CONTROLS
+      ===================================== */}
 
       <section className="px-7 pb-8 sm:px-9 lg:px-12 xl:px-14">
         <div className="flex flex-col gap-3 rounded-2xl border border-white/[0.05] bg-white/[0.018] p-3 sm:flex-row sm:items-center">
@@ -311,7 +359,9 @@ export default function TVShows() {
         </div>
       </section>
 
-      {/* ERROR */}
+      {/* =====================================
+          ERROR
+      ===================================== */}
 
       {error && (
         <div className="mx-7 mb-6 rounded-xl border border-red-400/20 bg-red-400/[0.05] p-3 text-[10px] text-red-200/70 sm:mx-9 lg:mx-12 xl:mx-14">
@@ -319,145 +369,195 @@ export default function TVShows() {
         </div>
       )}
 
-      {/* TV GRID */}
+      {/* =====================================
+          TV GRID
+      ===================================== */}
 
       <section className="px-7 pb-28 sm:px-9 lg:px-12 xl:px-14">
         {displayedShows.length ? (
-          <div className="grid grid-cols-2 gap-x-5 gap-y-8 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-            {displayedShows.map(
-              (show) => {
-                const match =
-                  Math.round(
-                    (show.vote_average ||
-                      0) * 10
-                  );
+          <>
+            <div className="grid grid-cols-2 gap-x-5 gap-y-8 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+              {displayedShows.map(
+                (show) => {
+                  const match =
+                    Math.round(
+                      (show.vote_average ||
+                        0) * 10
+                    );
 
-                return (
-                  <article
-                    key={show.id}
-                    className="group"
-                  >
-                    <div className="relative aspect-[2/3] overflow-hidden rounded-[12px] border border-white/[0.06] bg-[#111015] shadow-[0_14px_36px_rgba(0,0,0,0.3)] transition duration-300 group-hover:-translate-y-1.5 group-hover:border-violet-400/30 group-hover:shadow-[0_20px_50px_rgba(0,0,0,0.55)]">
-                      <img
-                        src={
-                          show.poster_path
-                            ? getPosterUrl(
-                                show.poster_path
-                              )
-                            : getBackdropUrl(
-                                show.backdrop_path
-                              )
-                        }
-                        alt={titleOf(
-                          show
-                        )}
-                        loading="lazy"
-                        className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.035]"
-                      />
-
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/5 to-transparent opacity-55 transition duration-300 group-hover:opacity-95" />
-
-                      <span className="absolute right-2.5 top-2.5 rounded-[4px] border border-white/15 bg-black/60 px-1.5 py-[2px] text-[7px] text-white/80 backdrop-blur">
-                        HD
-                      </span>
-
-                      <div className="absolute inset-0 flex items-center justify-center gap-2.5 opacity-0 transition duration-300 group-hover:opacity-100">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            navigate(
-                              `/watch/tv/${show.id}`
-                            )
+                  return (
+                    <article
+                      key={show.id}
+                      className="group"
+                    >
+                      <div className="relative aspect-[2/3] overflow-hidden rounded-[12px] border border-white/[0.06] bg-[#111015] shadow-[0_14px_36px_rgba(0,0,0,0.3)] transition duration-300 group-hover:-translate-y-1.5 group-hover:border-violet-400/30 group-hover:shadow-[0_20px_50px_rgba(0,0,0,0.55)]">
+                        <img
+                          src={
+                            show.poster_path
+                              ? getPosterUrl(
+                                  show.poster_path
+                                )
+                              : getBackdropUrl(
+                                  show.backdrop_path
+                                )
                           }
-                          className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-black shadow-xl transition hover:scale-110"
-                        >
-                          <Icon
-                            name="play"
-                            className="h-3.5 w-3.5"
-                          />
-                        </button>
+                          alt={titleOf(
+                            show
+                          )}
+                          loading="lazy"
+                          className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.035]"
+                        />
 
-                        <button
-                          type="button"
-                          onClick={() =>
-                            navigate(
-                              `/title/tv/${show.id}`
-                            )
-                          }
-                          className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/55 text-white backdrop-blur transition hover:scale-110 hover:bg-violet-500/20"
-                        >
-                          <Icon
-                            name="info"
-                            className="h-3.5 w-3.5"
-                          />
-                        </button>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/5 to-transparent opacity-55 transition duration-300 group-hover:opacity-95" />
+
+                        <span className="absolute right-2.5 top-2.5 rounded-[4px] border border-white/15 bg-black/60 px-1.5 py-[2px] text-[7px] text-white/80 backdrop-blur">
+                          HD
+                        </span>
+
+                        <div className="absolute inset-0 flex items-center justify-center gap-2.5 opacity-0 transition duration-300 group-hover:opacity-100">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              navigate(
+                                `/watch/tv/${show.id}`
+                              )
+                            }
+                            className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-black shadow-xl transition hover:scale-110"
+                          >
+                            <Icon
+                              name="play"
+                              className="h-3.5 w-3.5"
+                            />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              navigate(
+                                `/title/tv/${show.id}`
+                              )
+                            }
+                            className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/55 text-white backdrop-blur transition hover:scale-110 hover:bg-violet-500/20"
+                          >
+                            <Icon
+                              name="info"
+                              className="h-3.5 w-3.5"
+                            />
+                          </button>
+                        </div>
+
+                        <div className="absolute inset-x-0 bottom-0 translate-y-2 p-3.5 opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+                          <h3
+                            className="line-clamp-2 text-[20px] font-semibold leading-none text-white"
+                            style={
+                              DISPLAY_FONT
+                            }
+                          >
+                            {titleOf(
+                              show
+                            )}
+                          </h3>
+
+                          <div className="mt-2 flex items-center gap-2 text-[7px] text-white/45">
+                            {yearOf(
+                              show
+                            ) && (
+                              <>
+                                <span>
+                                  {yearOf(
+                                    show
+                                  )}
+                                </span>
+
+                                <span>
+                                  •
+                                </span>
+                              </>
+                            )}
+
+                            <span className="font-semibold text-violet-300">
+                              {match}% Match
+                            </span>
+                          </div>
+                        </div>
                       </div>
 
-                      <div className="absolute inset-x-0 bottom-0 translate-y-2 p-3.5 opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100">
-                        <h3
-                          className="line-clamp-2 text-[20px] font-semibold leading-none text-white"
-                          style={
-                            DISPLAY_FONT
-                          }
-                        >
+                      <div className="mt-2.5 px-0.5">
+                        <h3 className="truncate text-[10px] font-medium text-white/65">
                           {titleOf(
                             show
                           )}
                         </h3>
 
-                        <div className="mt-2 flex items-center gap-2 text-[7px] text-white/45">
-                          {yearOf(
-                            show
-                          ) && (
-                            <>
-                              <span>
-                                {yearOf(
-                                  show
-                                )}
-                              </span>
+                        <div className="mt-1 flex items-center gap-1.5 text-[7px] text-white/25">
+                          <span>
+                            {yearOf(
+                              show
+                            )}
+                          </span>
 
-                              <span>
-                                •
-                              </span>
-                            </>
-                          )}
+                          <span>
+                            •
+                          </span>
 
-                          <span className="font-semibold text-violet-300">
-                            {match}%
-                            Match
+                          <span>
+                            Series
                           </span>
                         </div>
                       </div>
-                    </div>
+                    </article>
+                  );
+                }
+              )}
+            </div>
 
-                    <div className="mt-2.5 px-0.5">
-                      <h3 className="truncate text-[10px] font-medium text-white/65">
-                        {titleOf(
-                          show
-                        )}
-                      </h3>
+            {/* =================================
+                LOAD MORE
+            ================================= */}
 
-                      <div className="mt-1 flex items-center gap-1.5 text-[7px] text-white/25">
-                        <span>
-                          {yearOf(
-                            show
-                          )}
-                        </span>
+            <div className="mt-16 flex flex-col items-center justify-center">
+              <p className="mb-4 text-[9px] uppercase tracking-[0.2em] text-white/25">
+                Page {page} of{" "}
+                {totalPages}
+              </p>
 
-                        <span>
-                          •
-                        </span>
-
-                        <span>
-                          Series
-                        </span>
-                      </div>
-                    </div>
-                  </article>
-                );
-              }
-            )}
-          </div>
+              {page < totalPages && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    loadShows(
+                      page + 1
+                    )
+                  }
+                  disabled={
+                    loadingMore
+                  }
+                  className="
+                    min-w-[180px]
+                    rounded-full
+                    border
+                    border-violet-400/30
+                    bg-violet-500/10
+                    px-7
+                    py-3.5
+                    text-[10px]
+                    font-semibold
+                    uppercase
+                    tracking-[0.16em]
+                    text-violet-200
+                    transition
+                    hover:bg-violet-500/20
+                    disabled:cursor-wait
+                    disabled:opacity-40
+                  "
+                >
+                  {loadingMore
+                    ? "Loading shows..."
+                    : "Load more shows"}
+                </button>
+              )}
+            </div>
+          </>
         ) : (
           <div className="flex min-h-[300px] items-center justify-center">
             <div className="text-center">

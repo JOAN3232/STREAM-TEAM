@@ -73,6 +73,7 @@ export default function Settings() {
   const navigate = useNavigate();
 
   const userId = localStorage.getItem("token");
+  const currentPlan = localStorage.getItem("stream_plan") || "standard";
 
   const storedProfile = useMemo(() => {
     try {
@@ -658,17 +659,20 @@ export default function Settings() {
                     </p>
 
                     <div className="mt-5 flex flex-wrap gap-2">
-                      <span className="rounded-full border border-white/[0.07] bg-black/20 px-3 py-1.5 text-[9px] font-medium text-white/45">
-                        Basic
-                      </span>
-
-                      <span className="rounded-full border border-white/[0.07] bg-black/20 px-3 py-1.5 text-[9px] font-medium text-white/45">
-                        Standard
-                      </span>
-
-                      <span className="rounded-full border border-violet-400/20 bg-violet-500/[0.08] px-3 py-1.5 text-[9px] font-medium text-violet-300">
-                        Premium
-                      </span>
+                      {["basic", "standard", "premium"].map((plan) => {
+                        const active = currentPlan === plan;
+                        return (
+                          <span
+                            key={plan}
+                            className={`rounded-full border px-3 py-1.5 text-[9px] font-medium capitalize ${
+                              active ? "border-violet-400/20 bg-violet-500/[0.08] text-violet-300"
+                              : "border-white/[0.07] bg-black/20 text-white/45"
+                              }`}
+                          >
+                            {plan}
+                          </span>
+                        )
+                      })}
                     </div>
                   </div>
 

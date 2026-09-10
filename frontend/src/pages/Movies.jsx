@@ -9,7 +9,6 @@ import { useNavigate } from "react-router-dom";
 import StreamingLayout from "../components/StreamingLayout";
 
 import {
-  getBrowseContent,
   getPosterUrl,
   getBackdropUrl,
 } from "../services/tmdbService";
@@ -89,6 +88,10 @@ export default function Movies() {
   const [movies, setMovies] =
     useState([]);
 
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);  
+
   const [loading, setLoading] =
     useState(true);
 
@@ -101,54 +104,81 @@ export default function Movies() {
   const [sort, setSort] =
     useState("popular");
 
-  useEffect(() => {
-    getBrowseContent()
-      .then((data) => {
-        const combined = [
-          ...(data.movies || []),
-          ...(data.popular || []),
-          ...(data.topRated || []),
-          ...(data.action || []),
-          ...(data.comedy || []),
-          ...(data.drama || []),
-        ];
-
-        const seen = new Set();
-
-        const uniqueMovies =
-          combined.filter((item) => {
-            if (!item?.id) {
-              return false;
-            }
-
-            if (
-              item.media_type === "tv"
-            ) {
-              return false;
-            }
-
-            if (
-              seen.has(item.id)
-            ) {
-              return false;
-            }
-
-            seen.add(item.id);
-
-            return true;
-          });
-
-        setMovies(uniqueMovies);
-      })
-      .catch(() => {
-        setError(
-          "STREAM could not load movies right now."
+  const loadMovies = async (pageNumber = 1) => {
+    try {
+      if (pageNumber === 1) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+  
+      setError("");
+  
+      const response = await fetch(
+        `https://api.themoviedb.org/3/discover/movie?include_adult=false&include_video=false&language=en-US&page=${pageNumber}&sort_by=popularity.desc`,
+        {
+          headers: {
+            Authorization: `Bearer ${import.meta.env.VITE_TMDB_TOKEN}`,
+            accept: "application/json",
+          },
+        }
+      );
+  
+      if (!response.ok) {
+        throw new Error(
+          `TMDB request failed with status ${response.status}`
         );
-      })
-      .finally(() => {
-        setLoading(false);
+      }
+  
+      const data = await response.json();
+  
+      setTotalPages(data.total_pages || 1);
+  
+      setMovies((currentMovies) => {
+        const combined =
+          pageNumber === 1
+            ? data.results || []
+            : [
+                ...currentMovies,
+                ...(data.results || []),
+              ];
+  
+        const seen = new Set();
+  
+        return combined.filter((movie) => {
+          if (!movie?.id) {
+            return false;
+          }
+  
+          if (seen.has(movie.id)) {
+            return false;
+          }
+  
+          seen.add(movie.id);
+  
+          return true;
+        });
       });
-  }, []);
+  
+      setPage(pageNumber);
+    } catch (error) {
+      console.error(
+        "Failed to load movies:",
+        error
+      );
+  
+      setError(
+        "STREAM could not load movies right now."
+      );
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+  
+  useEffect(() => {
+    loadMovies(1);
+  }, []);  
 
   const displayedMovies =
     useMemo(() => {
@@ -307,15 +337,13 @@ export default function Movies() {
 
       <section className="px-7 pb-28 sm:px-9 lg:px-12 xl:px-14">
         {displayedMovies.length ? (
-          <div className="grid grid-cols-2 gap-x-5 gap-y-8 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-            {displayedMovies.map(
-              (movie) => {
-                const match =
-                  Math.round(
-                    (movie.vote_average ||
-                      0) * 10
-                  );
-
+          <>
+            <div className="grid grid-cols-2 gap-x-5 gap-y-8 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+              {displayedMovies.map((movie) => {
+                const match = Math.round(
+                  (movie.vote_average || 0) * 10
+                );
+      
                 return (
                   <article
                     key={movie.id}
@@ -424,9 +452,48 @@ export default function Movies() {
                     </div>
                   </article>
                 );
-              }
-            )}
-          </div>
+              })}
+            </div>
+      
+            {/* PAGINATION */}
+            <div className="mt-16 flex flex-col items-center justify-center">
+              <p className="mb-4 text-[9px] uppercase tracking-[0.2em] text-white/25">
+                Page {page} of {totalPages}
+              </p>
+      
+              {page < totalPages && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    loadMovies(page + 1)
+                  }
+                  disabled={loadingMore}
+                  className="
+                    min-w-[180px]
+                    rounded-full
+                    border
+                    border-violet-400/30
+                    bg-violet-500/10
+                    px-7
+                    py-3.5
+                    text-[10px]
+                    font-semibold
+                    uppercase
+                    tracking-[0.16em]
+                    text-violet-200
+                    transition
+                    hover:bg-violet-500/20
+                    disabled:cursor-wait
+                    disabled:opacity-40
+                  "
+                >
+                  {loadingMore
+                    ? "Loading movies..."
+                    : "Load more movies"}
+                </button>
+              )}
+            </div>
+          </>
         ) : (
           <div className="flex min-h-[300px] items-center justify-center">
             <div className="text-center">
@@ -436,7 +503,7 @@ export default function Movies() {
               >
                 No movies found
               </h2>
-
+      
               <p className="mt-2 text-[10px] text-white/30">
                 Try another search.
               </p>
@@ -444,6 +511,7 @@ export default function Movies() {
           </div>
         )}
       </section>
+      
     </StreamingLayout>
   );
 }

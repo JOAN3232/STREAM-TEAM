@@ -32,17 +32,24 @@ export default function PaymentCallback() {
         const paymentStatus = result?.data?.status;
 
         if (result?.status === true && paymentStatus === "success") {
+          const paidPlan = localStorage.getItem("stream_pending_plan");
+        
+          if (paidPlan) {
+            localStorage.setItem("stream_plan", paidPlan);
+            localStorage.removeItem("stream_pending_plan");
+          }
+        
           setStatus("Payment confirmed. Redirecting...");
-
+        
           setTimeout(() => {
             navigate("/whos-watching", {
               replace: true,
             });
           }, 1200);
-
+        
           return;
         }
-
+        
         setStatus("Payment could not be confirmed.");
       } catch (error) {
         console.error("Payment verification failed:", error);

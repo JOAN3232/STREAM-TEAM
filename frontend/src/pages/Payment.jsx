@@ -32,8 +32,9 @@ export default function Payment() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  const email = searchParams.get("email") || "";
+  const email = searchParams.get("email") || localStorage.getItem("email") || "";
   const planId = searchParams.get("plan") || "standard";
+
 
   const plan =
     planDetails[planId] || planDetails.standard;
@@ -147,6 +148,7 @@ export default function Payment() {
          SEND USER TO PAYSTACK
       ====================================== */
 
+      localStorage.setItem("stream_pending_plan", planId)
       window.location.href =
         authorizationUrl;
 

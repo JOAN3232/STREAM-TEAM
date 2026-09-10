@@ -52,6 +52,8 @@ services:
   frontend:
     build:
       context: ./frontend
+      args:
+        VITE_TMDB_TOKEN: ${VITE_TMDB_TOKEN}
     container_name: stream-frontend
     restart: unless-stopped
     ports:
@@ -60,5 +62,6 @@ services:
       - api-gateway
       - backend
 
+    
 volumes:
   stream_mongodb_data:
