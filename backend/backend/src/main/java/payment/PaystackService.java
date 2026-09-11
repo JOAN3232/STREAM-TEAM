@@ -114,10 +114,10 @@ public class PaystackService {
                 metadata
         );
 
-        body.put(
-                "callback_url",
-                "http://localhost:5173/payment/callback"
-        );
+    body.put(
+    "callback_url",
+    "https://stream-team-seven.vercel.app/payment/callback"
+);
 
         return restClient
                 .post()
