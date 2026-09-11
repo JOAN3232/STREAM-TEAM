@@ -121,9 +121,7 @@ export default function TVShows() {
         `https://api.themoviedb.org/3/discover/tv?include_adult=false&language=en-US&page=${pageNumber}&sort_by=popularity.desc`,
         {
           headers: {
-            Authorization: `Bearer ${
-              import.meta.env.VITE_TMDB_TOKEN
-            }`,
+          Authorization: `Bearer ${import.meta.env.VITE_TMDB_TOKEN?.replace(/\s+/g, "")}`,
             accept: "application/json",
           },
         }
