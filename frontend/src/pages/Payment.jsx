@@ -5,6 +5,8 @@ import {
   useSearchParams,
 } from "react-router-dom";
 
+import {API_GATEWAY_URL } from "../config/api.js";
+
 const planDetails = {
   basic: {
     name: "Basic",
@@ -102,7 +104,7 @@ export default function Payment() {
       }
 
       const response = await fetch(
-        "http://localhost:8081/api/payments/initialize",
+        `${API_GATEWAY_URL}/api/payments/initialize`,
         {
           method: "POST",
 

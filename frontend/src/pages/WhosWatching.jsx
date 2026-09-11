@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { API_GATEWAY_URL } from "../config/api.js";
 
 import {
   getBackdropUrl,
@@ -11,7 +12,7 @@ import {
   getProfileAvatar,
 } from "../data/profileAvatars";
 
-const PROFILE_API = "http://localhost:8081/api/profiles";
+const PROFILE_API = `${API_GATEWAY_URL}/api/profiles`;
 
 /* =========================================
    AVATAR COMPONENT

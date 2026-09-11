@@ -1,4 +1,6 @@
-const API_BASE = "http://localhost:8081/api/profiles";
+import { API_GATEWAY_URL } from "../config/api.js";
+
+const API_BASE = `${API_GATEWAY_URL}/api/profiles`;
 
 const getUserId = () => localStorage.getItem("token");
 
