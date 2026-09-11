@@ -1,5 +1,6 @@
 package com.stream.backend.auth;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,6 +14,9 @@ public class AuthController {
 
     private final AuthService authService;
     private final EmailService emailService;
+
+    @Value("${app.frontend-base-url:http://localhost:5173}")
+    private String frontendBaseUrl;
 
     public AuthController(
             AuthService authService,
@@ -40,6 +44,24 @@ public class AuthController {
         }
 
         User user = authService.registerUser(email);
+
+        /*
+         * Create a fresh verification token
+         * and send the verification email.
+         */
+        user = authService.createVerificationToken(
+                user.getEmail()
+        );
+
+        String verificationUrl =
+                frontendBaseUrl
+                        + "/set-password?token="
+                        + user.getVerificationToken();
+
+        emailService.sendVerificationEmail(
+                user.getEmail(),
+                verificationUrl
+        );
 
         return ResponseEntity.ok(
                 Map.of(
@@ -71,7 +93,8 @@ public class AuthController {
                 authService.createVerificationToken(email);
 
         String verificationUrl =
-                "http://localhost:5173/set-password?token="
+                frontendBaseUrl
+                        + "/set-password?token="
                         + user.getVerificationToken();
 
         emailService.sendVerificationEmail(
