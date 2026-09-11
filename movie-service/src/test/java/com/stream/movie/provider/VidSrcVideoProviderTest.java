@@ -14,7 +14,9 @@ class VidSrcVideoProviderTest {
     void buildsIframeEmbedFromTmdbId() {
         VidSrcProperties properties = new VidSrcProperties();
         properties.setBaseUrl("https://vidsrcme.ru");
-        VidSrcVideoProvider provider = new VidSrcVideoProvider(properties);
+
+        VidSrcVideoProvider provider =
+                new VidSrcVideoProvider(properties);
 
         MovieResponse movie = new MovieResponse(
                 27205,
@@ -25,13 +27,25 @@ class VidSrcVideoProviderTest {
                 8.3,
                 "2010-07-16",
                 List.of("Action"),
-                null);
+                null,
+                "movie"
+        );
 
-        VideoInfo video = provider.findPlayableVideo(movie).orElseThrow();
+        VideoInfo video =
+                provider.findPlayableVideo(movie).orElseThrow();
 
-        assertThat(video.provider()).isEqualTo("vidsrc");
-        assertThat(video.videoId()).isEqualTo("27205");
-        assertThat(video.embedUrl()).isEqualTo("https://vidsrcme.ru/embed/movie/27205");
-        assertThat(video.embedUrl()).doesNotContain(".mp4");
+        assertThat(video.provider())
+                .isEqualTo("vidsrc");
+
+        assertThat(video.videoId())
+                .isEqualTo("27205");
+
+        assertThat(video.embedUrl())
+                .isEqualTo(
+                        "https://vidsrcme.ru/embed/movie/27205"
+                );
+
+        assertThat(video.embedUrl())
+                .doesNotContain(".mp4");
     }
 }

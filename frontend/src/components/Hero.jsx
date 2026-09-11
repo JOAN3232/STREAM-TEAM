@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   getBackdropUrl,
   getTrendingMovies,
-} from "../services/movieService";
+} from "../services/tmdbService";
 
 export default function Hero() {
   const navigate = useNavigate();
@@ -20,14 +20,18 @@ export default function Hero() {
         const movies = await getTrendingMovies();
 
         const movieBackgrounds = movies
-          .filter((movie) => movie.backdrop_path || movie.backdropUrl)
+          .filter((movie) => movie.backdropUrl || movie.backdrop_path)
           .slice(0, 7)
-          .map((movie) => ({
-            id: movie.id,
-            image: getBackdropUrl(movie.backdrop_path || movie.backdropUrl),
-            title: movie.title || movie.name || "Movie",
-          }));
+          .map((movie) => {
+            const backdrop =
+              movie.backdropUrl || movie.backdrop_path;
 
+            return {
+              id: movie.id,
+              image: getBackdropUrl(backdrop),
+              title: movie.title || movie.name || "Movie",
+            };
+          });
 
         setBackgrounds(movieBackgrounds);
       } catch (error) {
@@ -72,16 +76,19 @@ export default function Hero() {
     setEmailError("");
     setLoading(true);
 
-    setTimeout(() => {
+    try {
       navigate(
         `/register-intro?email=${encodeURIComponent(cleanEmail)}`
       );
-    }, 900);
+    } catch (error) {
+      console.error("Get started error:", error);
+      setEmailError("Something went wrong. Please try again.");
+      setLoading(false);
+    }
   };
 
   return (
     <section className="relative min-h-screen overflow-hidden bg-[#050505]">
-      {/* BACKGROUND SLIDESHOW */}
       {backgrounds.map((movie, index) => (
         <div
           key={movie.id}
@@ -99,12 +106,10 @@ export default function Hero() {
         </div>
       ))}
 
-      {/* FALLBACK ONLY WHILE TITLES LOAD */}
       {backgrounds.length === 0 && (
         <div className="absolute inset-0 bg-gradient-to-br from-[#160b27] via-[#09060f] to-[#050505]" />
       )}
 
-      {/* CINEMATIC OVERLAYS */}
       <div className="absolute inset-0 bg-black/35" />
 
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(124,58,237,0.18),transparent_62%)]" />
@@ -113,7 +118,6 @@ export default function Hero() {
 
       <div className="absolute inset-0 bg-gradient-to-r from-black/30 via-transparent to-black/30" />
 
-      {/* CONTENT */}
       <div className="relative z-10 mx-auto flex min-h-screen max-w-5xl flex-col items-center justify-center px-6 pb-20 pt-28 text-center">
         <h1
           className="max-w-4xl text-4xl font-semibold leading-[1.02] text-white sm:text-5xl md:text-6xl lg:text-7xl"
@@ -134,7 +138,6 @@ export default function Hero() {
           Ready to watch? Enter your email to create or restart your membership.
         </p>
 
-        {/* EMAIL */}
         <div className="mt-7 w-full max-w-xl">
           <div className="flex flex-col gap-3 sm:flex-row">
             <input
@@ -188,7 +191,6 @@ export default function Hero() {
           )}
         </div>
 
-        {/* SLIDER INDICATORS */}
         {backgrounds.length > 0 && (
           <div className="mt-12 flex items-center justify-center gap-2">
             {backgrounds.map((movie, index) => (

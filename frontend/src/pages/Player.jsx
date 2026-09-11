@@ -1,544 +1,802 @@
-import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-
-import WatchPlayer from "../components/WatchPlayer";
-
-import { addHistoryEntry } from "../services/historyService";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import {
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
+
+import {
+  getBackdropUrl,
   getMediaDetails,
   getMovieVideos,
-  getTVEpisodeDetails,
-  getTVSeasonDetails,
-} from "../services/movieService";
+  getPosterUrl,
+  getTvEpisode,
+} from "../services/tmdbService";
+
+import {
+  getPlayableContentById,
+  getPlayableVideoUrl,
+} from "../data/playableContent";
+
+import {
+  getContinueWatching,
+  saveContinueWatching as saveContinueWatchingToBackend,
+} from "../services/continueWatchingService";
+
+const VIDSRC_BASE = "https://vidsrcme.ru";
 
 export default function Player() {
   const navigate = useNavigate();
+  const { id, mediaType = "movie" } = useParams();
+  const [searchParams] = useSearchParams();
 
-  const {
-    id,
-    mediaType = "movie",
-    seasonNumber,
-    episodeNumber,
-  } = useParams();
+  const seasonNumber = Number(searchParams.get("season")) || 1;
+  const episodeNumber = Number(searchParams.get("episode")) || 1;
 
+  const videoRef = useRef(null);
+  const lastSavedSecondRef = useRef(-1);
+  const resumeTimeRef = useRef(0);
+  const vidSrcSavedRef = useRef("");
+
+  const [movie, setMovie] = useState(null);
+  const [episodeInfo, setEpisodeInfo] = useState(null);
+  const [trailerKey, setTrailerKey] = useState(null);
+  const [embedUrl, setEmbedUrl] = useState("");
+  const [videoUrl, setVideoUrl] = useState("");
+  const [useTrailer, setUseTrailer] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [watchProgress, setWatchProgress] = useState(0);
+
+  const isPlayable = mediaType === "playable";
+  const isMovie = mediaType === "movie";
   const isTV = mediaType === "tv";
 
-  const season = Number(
-    seasonNumber || 0
-  );
+  const activeProfile = useMemo(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem("stream_active_profile"));
+    } catch {
+      return null;
+    }
+  }, []);
 
-  const episode = Number(
-    episodeNumber || 0
-  );
+  const profileId = activeProfile?.id || activeProfile?.name || "default";
+  const continueWatchingKey = `stream_continue_watching_${profileId}`;
 
-  const [movie, setMovie] =
-    useState(null);
+  const getLocalContinueWatching = () => {
+    try {
+      return JSON.parse(localStorage.getItem(continueWatchingKey)) || [];
+    } catch {
+      return [];
+    }
+  };
 
-  const [episodeData, setEpisodeData] =
-    useState(null);
+  const removeFromLocalCache = () => {
+    if (!movie) return;
 
-  const [seasonData, setSeasonData] =
-    useState(null);
+    try {
+      const current = getLocalContinueWatching();
+      const remaining = current.filter(
+        (saved) =>
+          !(
+            String(saved.id || saved.contentId) === String(movie.id) &&
+            saved.mediaType === "playable"
+          )
+      );
 
-  const [playback, setPlayback] =
-    useState(null);
+      localStorage.setItem(continueWatchingKey, JSON.stringify(remaining));
+    } catch {
+    }
+  };
 
-  const [loading, setLoading] =
-    useState(true);
+  const syncLocalCache = (progress, currentTime) => {
+    if (!movie || !isPlayable) return;
 
-  const [error, setError] =
-    useState("");
+    try {
+      const current = getLocalContinueWatching();
 
-  /* =====================================================
-     LOAD PLAYER
-  ===================================================== */
+      if (progress >= 95) {
+        const remaining = current.filter(
+          (saved) =>
+            !(
+              String(saved.id || saved.contentId) === String(movie.id) &&
+              saved.mediaType === "playable"
+            )
+        );
+
+        localStorage.setItem(continueWatchingKey, JSON.stringify(remaining));
+        return;
+      }
+
+      const item = {
+        id: movie.id,
+        contentId: String(movie.id),
+        mediaType: "playable",
+        title: movie.title || "Untitled",
+        overview: movie.description || movie.overview || "",
+        posterUrl: movie.posterUrl || "",
+        backdropUrl: movie.backdropUrl || "",
+        release_date: movie.year ? String(movie.year) : "",
+        progress: Math.round(progress),
+        currentTime,
+        watchedAt: Date.now(),
+      };
+
+      const withoutCurrent = current.filter(
+        (saved) =>
+          !(
+            String(saved.id || saved.contentId) === String(movie.id) &&
+            saved.mediaType === "playable"
+          )
+      );
+
+      localStorage.setItem(
+        continueWatchingKey,
+        JSON.stringify([item, ...withoutCurrent].slice(0, 20))
+      );
+    } catch {
+    }
+  };
+
+  const loadProgressFromLocalCache = () => {
+    if (!movie) return;
+
+    try {
+      const current = getLocalContinueWatching();
+      const existing = current.find(
+        (item) =>
+          String(item.id || item.contentId) === String(movie.id) &&
+          item.mediaType === "playable"
+      );
+
+      if (existing) {
+        const progress = Number(existing.progress) || 0;
+        const currentTime = Number(existing.currentTime) || 0;
+
+        setWatchProgress(progress);
+        resumeTimeRef.current = currentTime;
+
+        const video = videoRef.current;
+
+        if (
+          video &&
+          Number.isFinite(video.duration) &&
+          currentTime > 0 &&
+          currentTime < video.duration - 10
+        ) {
+          video.currentTime = currentTime;
+        }
+      } else {
+        setWatchProgress(0);
+        resumeTimeRef.current = 0;
+      }
+    } catch {
+      setWatchProgress(0);
+      resumeTimeRef.current = 0;
+    }
+  };
+
+  const findTrailer = (details) => {
+    const youtubeVideos =
+      details?.videos?.results?.filter(
+        (video) => video.site === "YouTube" && video.key
+      ) || [];
+
+    return (
+      youtubeVideos.find(
+        (video) => video.type === "Trailer" && video.official
+      ) ||
+      youtubeVideos.find((video) => video.type === "Trailer") ||
+      youtubeVideos.find((video) => video.type === "Teaser") ||
+      youtubeVideos[0] ||
+      null
+    );
+  };
 
   useEffect(() => {
-    const loadPlayer = async () => {
+    let cancelled = false;
+
+    const loadContent = async () => {
       try {
         setLoading(true);
         setError("");
+        setTrailerKey(null);
+        setEmbedUrl("");
+        setVideoUrl("");
+        setMovie(null);
+        setEpisodeInfo(null);
+        setUseTrailer(false);
 
-        if (isTV) {
-          const [
-            details,
-            currentEpisode,
-            currentSeason,
-          ] = await Promise.all([
-            getMediaDetails(
-              "tv",
-              id
-            ),
+        vidSrcSavedRef.current = "";
+        resumeTimeRef.current = 0;
+        lastSavedSecondRef.current = -1;
 
-            getTVEpisodeDetails(
-              id,
-              season,
-              episode
-            ),
+        if (isPlayable) {
+          const playable = getPlayableContentById(id);
 
-            getTVSeasonDetails(
-              id,
-              season
-            ),
-          ]);
+          if (!playable) {
+            throw new Error("This STREAM title could not be found.");
+          }
 
-          setMovie(details);
+          const resolvedVideoUrl =
+            playable.videoUrl ||
+            (await getPlayableVideoUrl(playable.commonsFile));
 
-          setEpisodeData(
-            currentEpisode
-          );
+          if (cancelled) return;
 
-          setSeasonData(
-            currentSeason
-          );
+          setMovie(playable);
+          setVideoUrl(resolvedVideoUrl);
+          return;
+        }
 
-          /*
-           * TV playback is not currently exposed
-           * by the existing movie-service backend.
-           */
-          setPlayback(null);
+        const details = await getMediaDetails(mediaType, id);
 
+        if (cancelled) return;
+
+        setMovie(details);
+
+        const trailer = findTrailer(details);
+
+        if (trailer) {
+          setTrailerKey(trailer.key);
+        }
+
+        if (isMovie) {
           try {
-            await addHistoryEntry(
-              Number(id),
-              episode
+            const playback = await getMovieVideos(id);
+
+            if (!cancelled && playback?.embedUrl) {
+              setEmbedUrl(playback.embedUrl);
+              setUseTrailer(false);
+            } else if (!cancelled && trailer) {
+              setUseTrailer(true);
+            }
+          } catch (playbackError) {
+            console.error("VidSrc playback unavailable:", playbackError);
+            if (!cancelled && trailer) setUseTrailer(true);
+          }
+        } else if (isTV) {
+          try {
+            const episode = await getTvEpisode(
+              id,
+              seasonNumber,
+              episodeNumber
             );
-          } catch (historyError) {
-            console.warn(
-              "Could not save TV history",
-              historyError
+
+            if (cancelled) return;
+
+            setEpisodeInfo(episode);
+            setEmbedUrl(
+              `${VIDSRC_BASE}/embed/tv/${id}/${seasonNumber}/${episodeNumber}`
             );
+            setUseTrailer(false);
+          } catch (episodeError) {
+            console.error("TV episode playback unavailable:", episodeError);
+
+            if (!cancelled && trailer) {
+              setUseTrailer(true);
+            } else if (!cancelled) {
+              setError("This episode could not be loaded right now.");
+            }
+          }
+        } else if (trailer) {
+          setUseTrailer(true);
+        }
+      } catch (err) {
+        console.error("STREAM player error:", err);
+
+        if (!cancelled) {
+          setError(err?.message || "STREAM could not load this title.");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    loadContent();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    id,
+    mediaType,
+    isPlayable,
+    isMovie,
+    isTV,
+    seasonNumber,
+    episodeNumber,
+  ]);
+
+  useEffect(() => {
+    if (!movie || !isPlayable) return;
+
+    let cancelled = false;
+
+    const loadSavedProgress = async () => {
+      try {
+        const backendItems = await getContinueWatching();
+        if (cancelled) return;
+
+        const existing = backendItems.find(
+          (item) =>
+            String(item.contentId) === String(movie.id) &&
+            item.mediaType === "playable"
+        );
+
+        if (existing) {
+          const progress = Number(existing.progress) || 0;
+          const currentTime = Number(existing.currentTime) || 0;
+
+          setWatchProgress(progress);
+          resumeTimeRef.current = currentTime;
+          syncLocalCache(progress, currentTime);
+
+          const video = videoRef.current;
+
+          if (
+            video &&
+            Number.isFinite(video.duration) &&
+            video.duration > 0 &&
+            currentTime > 0 &&
+            currentTime < video.duration - 10
+          ) {
+            video.currentTime = currentTime;
           }
 
           return;
         }
 
-        /* =================================================
-           MOVIE PLAYER
-        ================================================= */
-
-        const [
-          details,
-          video,
-        ] = await Promise.all([
-          getMediaDetails(
-            "movie",
-            id
-          ),
-
-          getMovieVideos(id),
-        ]);
-
-        setMovie(details);
-        setPlayback(video);
-
-        try {
-          await addHistoryEntry(
-            Number(id),
-            0
-          );
-        } catch (historyError) {
-          console.warn(
-            "Could not save watch history",
-            historyError
-          );
-        }
-
+        setWatchProgress(0);
+        resumeTimeRef.current = 0;
+        removeFromLocalCache();
       } catch (err) {
-        console.error(
-          "STREAM player error:",
-          err
-        );
-
-        setError(
-          "STREAM could not load this title."
-        );
-      } finally {
-        setLoading(false);
+        console.error("Failed to load Continue Watching from backend:", err);
+        loadProgressFromLocalCache();
       }
     };
 
-    loadPlayer();
+    loadSavedProgress();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [movie, isPlayable, continueWatchingKey]);
+
+  const saveProgress = async (progress, currentTime = 0) => {
+    if (!movie || !isPlayable) return;
+
+    const roundedProgress = Math.round(progress);
+    syncLocalCache(roundedProgress, currentTime);
+
+    try {
+      await saveContinueWatchingToBackend({
+        contentId: String(movie.id),
+        mediaType: "playable",
+        title: movie.title || "Untitled",
+        overview: movie.description || movie.overview || "",
+        posterUrl: movie.posterUrl || "",
+        backdropUrl: movie.backdropUrl || "",
+        year: movie.year ? String(movie.year) : "",
+        progress: roundedProgress,
+        currentTime,
+      });
+    } catch (err) {
+      console.error("Continue Watching backend save error:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (isPlayable || !movie || !embedUrl) return;
+
+    const contentId = String(movie.id || id);
+    const savedMediaType = mediaType || "movie";
+    const saveKey = isTV
+      ? `${savedMediaType}:${contentId}:s${seasonNumber}:e${episodeNumber}`
+      : `${savedMediaType}:${contentId}`;
+
+    if (vidSrcSavedRef.current === saveKey) return;
+    vidSrcSavedRef.current = saveKey;
+
+    const baseTitle = movie.title || movie.name || "Untitled";
+    const title =
+      isTV && episodeInfo?.name
+        ? `${baseTitle} • S${seasonNumber} E${episodeNumber} • ${episodeInfo.name}`
+        : baseTitle;
+
+    const overview = episodeInfo?.overview || movie.overview || movie.description || "";
+
+    const rawPoster = movie.posterUrl || movie.poster_path || "";
+    const rawBackdrop = movie.backdropUrl || movie.backdrop_path || "";
+
+    const posterUrl = rawPoster ? getPosterUrl(rawPoster) : "";
+    const backdropUrl = rawBackdrop ? getBackdropUrl(rawBackdrop) : "";
+
+    const releaseDate =
+      movie.release_date || movie.first_air_date || movie.releaseDate || "";
+
+    const year = releaseDate ? String(releaseDate).slice(0, 4) : "";
+    const progress = 1;
+    const currentTime = 0;
+
+    const saveVidSrcMovie = async () => {
+      try {
+        const current = getLocalContinueWatching();
+
+        const item = {
+          id: contentId,
+          contentId,
+          mediaType: savedMediaType,
+          title,
+          overview,
+          posterUrl,
+          backdropUrl,
+          poster_path: posterUrl,
+          backdrop_path: backdropUrl,
+          release_date: releaseDate || year,
+          progress,
+          currentTime,
+          ...(isTV
+            ? {
+                season: seasonNumber,
+                episode: episodeNumber,
+                episodeName: episodeInfo?.name || "",
+              }
+            : {}),
+          watchedAt: Date.now(),
+        };
+
+        const withoutCurrent = current.filter(
+          (saved) =>
+            !(
+              String(saved.id || saved.contentId) === contentId &&
+              saved.mediaType === savedMediaType
+            )
+        );
+
+        localStorage.setItem(
+          continueWatchingKey,
+          JSON.stringify([item, ...withoutCurrent].slice(0, 20))
+        );
+      } catch (err) {
+        console.error("VidSrc Continue Watching local cache error:", err);
+      }
+
+      try {
+        await saveContinueWatchingToBackend({
+          contentId,
+          mediaType: savedMediaType,
+          title,
+          overview,
+          posterUrl,
+          backdropUrl,
+          year,
+          progress,
+          currentTime,
+        });
+      } catch (err) {
+        console.error("VidSrc Continue Watching backend save error:", err);
+      }
+    };
+
+    saveVidSrcMovie();
   }, [
+    embedUrl,
+    movie,
+    episodeInfo,
     id,
     mediaType,
-    season,
-    episode,
+    isPlayable,
     isTV,
+    seasonNumber,
+    episodeNumber,
+    continueWatchingKey,
   ]);
 
-  /* =====================================================
-     LOADING
-  ===================================================== */
+  const handleLoadedMetadata = () => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const resumeTime = resumeTimeRef.current;
+
+    if (
+      resumeTime > 0 &&
+      Number.isFinite(video.duration) &&
+      resumeTime < video.duration - 10
+    ) {
+      video.currentTime = resumeTime;
+    }
+  };
+
+  const handleTimeUpdate = () => {
+    const video = videoRef.current;
+
+    if (!video || !video.duration || !Number.isFinite(video.duration)) return;
+
+    const progress = (video.currentTime / video.duration) * 100;
+    setWatchProgress(progress);
+
+    const wholeSeconds = Math.floor(video.currentTime);
+
+    if (
+      wholeSeconds > 0 &&
+      wholeSeconds % 5 === 0 &&
+      wholeSeconds !== lastSavedSecondRef.current
+    ) {
+      lastSavedSecondRef.current = wholeSeconds;
+      saveProgress(progress, video.currentTime);
+    }
+  };
+
+  const handlePause = () => {
+    const video = videoRef.current;
+
+    if (!video || !video.duration || !Number.isFinite(video.duration)) return;
+
+    const progress = (video.currentTime / video.duration) * 100;
+    saveProgress(progress, video.currentTime);
+  };
+
+  const handleEnded = () => {
+    saveProgress(100, 0);
+    setWatchProgress(100);
+    resumeTimeRef.current = 0;
+  };
+
+  useEffect(() => {
+    return () => {
+      const video = videoRef.current;
+
+      if (
+        !isPlayable ||
+        !movie ||
+        !video ||
+        !video.duration ||
+        !Number.isFinite(video.duration)
+      ) {
+        return;
+      }
+
+      const progress = (video.currentTime / video.duration) * 100;
+      saveProgress(progress, video.currentTime);
+    };
+  }, [isPlayable, movie]);
 
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-black text-white">
-
         <div className="flex flex-col items-center gap-4">
-
           <div className="h-10 w-10 animate-spin rounded-full border-2 border-violet-500/25 border-t-violet-400" />
-
           <p className="text-[9px] uppercase tracking-[0.3em] text-white/35">
             Preparing STREAM
           </p>
-
         </div>
-
       </main>
     );
   }
 
-  /* =====================================================
-     TV PLAYER
-  ===================================================== */
-
-  if (isTV) {
-    const episodes =
-      seasonData?.episodes || [];
-
-    const currentIndex =
-      episodes.findIndex(
-        (item) =>
-          item.episode_number ===
-          episode
-      );
-
-    const previousEpisode =
-      currentIndex > 0
-        ? episodes[currentIndex - 1]
-        : null;
-
-    const nextEpisode =
-      currentIndex >= 0 &&
-      currentIndex <
-        episodes.length - 1
-        ? episodes[currentIndex + 1]
-        : null;
-
+  if (!movie || (isPlayable && !videoUrl)) {
     return (
-      <main className="min-h-screen bg-black text-white">
-
-        {/* PLAYER AREA */}
-
-        <section className="relative aspect-video w-full bg-black lg:h-screen lg:aspect-auto">
-
-          <div className="absolute inset-0 flex items-center justify-center">
-
-            <div className="max-w-lg px-6 text-center">
-
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-violet-400/20 bg-violet-500/10 text-xl">
-                ▶
-              </div>
-
-              <h1
-                className="mt-6 text-3xl font-semibold"
-                style={{
-                  fontFamily:
-                    '"Cormorant Garamond", serif',
-                }}
-              >
-                {episodeData?.name ||
-                  `Episode ${episode}`}
-              </h1>
-
-              <p className="mt-2 text-sm text-white/40">
-                Season {season} • Episode{" "}
-                {episode}
-              </p>
-
-              <p className="mt-5 text-sm leading-6 text-white/45">
-                {episodeData?.overview ||
-                  "Episode information loaded from TMDB."}
-              </p>
-
-              <div className="mt-6 rounded-xl border border-violet-400/20 bg-violet-500/[0.06] p-4 text-left text-xs leading-5 text-white/50">
-                TV episode playback is not
-                connected to the current backend
-                yet. The TMDB season and episode
-                data is working; the next backend
-                step is an authorized TV playback
-                endpoint.
-              </div>
-
-            </div>
-
+      <main className="flex min-h-screen items-center justify-center bg-black px-6 text-white">
+        <div className="max-w-md text-center">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-violet-400/20 bg-violet-500/10 text-xl">
+            !
           </div>
 
-          {/* BACK */}
+          <h1
+            className="mt-5 text-3xl font-semibold"
+            style={{ fontFamily: '"Cormorant Garamond", serif' }}
+          >
+            Unable to play
+          </h1>
+
+          <p className="mt-2 text-sm leading-6 text-white/40">
+            {error || "STREAM couldn't load this title."}
+          </p>
 
           <button
             type="button"
-            onClick={() =>
-              navigate(
-                `/title/tv/${id}`
-              )
-            }
-            className="absolute left-5 top-5 z-30 flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-black/55 text-xl text-white/80 backdrop-blur-xl transition hover:border-violet-400/50 hover:bg-violet-500/15 hover:text-white"
+            onClick={() => navigate(-1)}
+            className="mt-6 rounded-xl border border-white/15 bg-white/[0.04] px-5 py-3 text-sm text-white/70"
           >
-            ←
+            ← Go Back
           </button>
-
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/90 via-black/35 to-transparent" />
-
-        </section>
-
-        {/* EPISODE INFORMATION */}
-
-        <section className="mx-auto max-w-[1200px] px-6 py-10">
-
-          <p className="text-[10px] uppercase tracking-[0.3em] text-violet-300">
-            {movie?.name}
-          </p>
-
-          <h2
-            className="mt-2 text-3xl font-semibold"
-            style={{
-              fontFamily:
-                '"Cormorant Garamond", serif',
-            }}
-          >
-            S{season} E{episode}{" "}
-            {episodeData?.name
-              ? `— ${episodeData.name}`
-              : ""}
-          </h2>
-
-          <div className="mt-3 flex flex-wrap gap-3 text-xs text-white/35">
-
-            {episodeData?.air_date && (
-              <span>
-                {episodeData.air_date}
-              </span>
-            )}
-
-            {episodeData?.runtime && (
-              <>
-                <span>•</span>
-
-                <span>
-                  {episodeData.runtime}m
-                </span>
-              </>
-            )}
-
-            {episodeData?.vote_average > 0 && (
-              <>
-                <span>•</span>
-
-                <span className="text-amber-300">
-                  ★{" "}
-                  {episodeData.vote_average.toFixed(
-                    1
-                  )}
-                </span>
-              </>
-            )}
-
-          </div>
-
-          <p className="mt-5 max-w-3xl text-sm leading-7 text-white/50">
-            {episodeData?.overview}
-          </p>
-
-          {/* EPISODE NAVIGATION */}
-
-          <div className="mt-8 flex flex-wrap gap-3">
-
-            {previousEpisode && (
-              <button
-                onClick={() =>
-                  navigate(
-                    `/watch/tv/${id}/${season}/${previousEpisode.episode_number}`
-                  )
-                }
-                className="rounded-xl border border-white/10 bg-white/[0.03] px-5 py-3 text-sm text-white/70 transition hover:border-violet-400/40 hover:text-white"
-              >
-                ← Previous
-              </button>
-            )}
-
-            <button
-              onClick={() =>
-                navigate(
-                  `/title/tv/${id}`
-                )
-              }
-              className="rounded-xl border border-white/10 bg-white/[0.03] px-5 py-3 text-sm text-white/70 transition hover:border-violet-400/40 hover:text-white"
-            >
-              Seasons & Episodes
-            </button>
-
-            {nextEpisode && (
-              <button
-                onClick={() =>
-                  navigate(
-                    `/watch/tv/${id}/${season}/${nextEpisode.episode_number}`
-                  )
-                }
-                className="rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-white/85"
-              >
-                Next Episode →
-              </button>
-            )}
-
-          </div>
-
-        </section>
-
+        </div>
       </main>
     );
   }
 
-  /* =====================================================
-     MOVIE PLAYER
-  ===================================================== */
+  const showingTrailer =
+    !isPlayable && trailerKey && (useTrailer || !embedUrl);
+
+  const showingVidSrc = !isPlayable && embedUrl && !useTrailer;
+
+  const playerTitle =
+    isTV && episodeInfo?.name
+      ? `${movie?.title || movie?.name || "STREAM"} • S${seasonNumber} E${episodeNumber} • ${episodeInfo.name}`
+      : movie?.title || movie?.name || "STREAM";
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-black text-white">
+      {isPlayable && videoUrl && (
+        <video
+          ref={videoRef}
+          src={videoUrl}
+          className="absolute inset-0 h-full w-full bg-black object-contain"
+          controls
+          autoPlay
+          playsInline
+          preload="metadata"
+          onLoadedMetadata={handleLoadedMetadata}
+          onTimeUpdate={handleTimeUpdate}
+          onPause={handlePause}
+          onEnded={handleEnded}
+        >
+          Your browser does not support video playback.
+        </video>
+      )}
 
-      {playback ? (
-        <WatchPlayer
-          provider={
-            playback.provider
-          }
-          videoId={
-            playback.videoId
-          }
-          embedUrl={
-            playback.embedUrl
-          }
-          title={`${movie?.title || "STREAM"} player`}
+      {showingVidSrc && (
+        <iframe
+          src={embedUrl}
+          title={`${playerTitle} playback`}
+          allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+          allowFullScreen
+          referrerPolicy="origin"
+          className="absolute inset-0 h-full w-full border-0 bg-black"
         />
-      ) : (
+      )}
+
+      {showingTrailer && (
+        <iframe
+          src={`https://www.youtube-nocookie.com/embed/${trailerKey}?autoplay=1&rel=0&modestbranding=1`}
+          title={`${movie?.title || movie?.name || "STREAM"} trailer`}
+          allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+          allowFullScreen
+          referrerPolicy="strict-origin-when-cross-origin"
+          className="absolute inset-0 h-full w-full border-0 bg-black"
+        />
+      )}
+
+      {!isPlayable && !showingVidSrc && !showingTrailer && (
         <div className="absolute inset-0 flex items-center justify-center bg-black px-6">
-
           <div className="max-w-md text-center">
-
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-violet-400/20 bg-violet-500/10 text-xl">
               !
             </div>
 
             <h1
               className="mt-5 text-3xl font-semibold"
-              style={{
-                fontFamily:
-                  '"Cormorant Garamond", serif',
-              }}
+              style={{ fontFamily: '"Cormorant Garamond", serif' }}
             >
               Playback unavailable
             </h1>
 
             <p className="mt-2 text-sm leading-6 text-white/40">
-              {error ||
-                "We couldn't find a playable video for this title."}
+              {error || "No playable video or official trailer is available for this title."}
             </p>
 
             <button
               type="button"
-              onClick={() =>
-                navigate(-1)
-              }
-              className="mt-6 rounded-xl border border-white/15 bg-white/[0.04] px-5 py-3 text-sm text-white/70 transition hover:border-violet-400/40 hover:text-white"
+              onClick={() => navigate(-1)}
+              className="mt-6 rounded-xl border border-white/15 bg-white/[0.04] px-5 py-3 text-sm text-white/70"
             >
               ← Go Back
             </button>
-
           </div>
-
         </div>
       )}
 
-      {/* TOP FADE */}
-
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-32 bg-gradient-to-b from-black/90 via-black/35 to-transparent" />
-
-      {/* BACK */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-28 bg-gradient-to-b from-black/80 to-transparent" />
 
       <button
         type="button"
-        onClick={() =>
-          navigate(-1)
-        }
+        onClick={() => navigate(-1)}
         aria-label="Go back"
         className="absolute left-5 top-5 z-30 flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-black/55 text-xl text-white/80 shadow-lg backdrop-blur-xl transition hover:scale-105 hover:border-violet-400/50 hover:bg-violet-500/15 hover:text-white"
       >
         ←
       </button>
 
-      {/* TITLE */}
+      {!isPlayable && embedUrl && trailerKey && (
+        <button
+          type="button"
+          onClick={() => setUseTrailer((current) => !current)}
+          className="absolute right-5 top-20 z-40 rounded-full border border-white/10 bg-black/55 px-3 py-2 text-[9px] font-semibold uppercase tracking-[0.08em] text-white/65 backdrop-blur-xl transition hover:border-violet-400/40 hover:bg-violet-500/15 hover:text-white"
+        >
+          {useTrailer ? (isTV ? "Watch Episode" : "Watch Movie") : "Trailer"}
+        </button>
+      )}
 
       <div className="pointer-events-none absolute left-[80px] top-5 z-30 hidden sm:block">
-
         <p className="text-[8px] font-semibold uppercase tracking-[0.3em] text-violet-300">
-          Now Watching
+          {isPlayable || showingVidSrc ? "Now Playing" : "Official Trailer"}
         </p>
 
         <h1
-          className="mt-1 max-w-[520px] truncate text-xl font-semibold"
-          style={{
-            fontFamily:
-              '"Cormorant Garamond", serif',
-          }}
+          className="mt-1 max-w-[720px] truncate text-xl font-semibold"
+          style={{ fontFamily: '"Cormorant Garamond", serif' }}
         >
-          {movie?.title ||
-            movie?.name ||
-            "STREAM"}
+          {playerTitle}
         </h1>
 
         <div className="mt-1 flex items-center gap-2 text-[10px] text-white/35">
-
-          {movie?.release_date && (
-            <span>
-              {movie.release_date.slice(
-                0,
-                4
-              )}
-            </span>
-          )}
-
-          {movie?.runtime && (
+          {isTV && (
             <>
+              <span>Season {seasonNumber}</span>
               <span>•</span>
-
-              <span>
-                {Math.floor(
-                  movie.runtime / 60
-                )}
-                h{" "}
-                {movie.runtime % 60}
-                m
-              </span>
+              <span>Episode {episodeNumber}</span>
+              {episodeInfo?.runtime && (
+                <>
+                  <span>•</span>
+                  <span>{episodeInfo.runtime} min</span>
+                </>
+              )}
+              <span>•</span>
+              <span>{showingVidSrc ? "STREAM" : "STREAM Preview"}</span>
             </>
           )}
 
-          <span>•</span>
+          {!isTV && isPlayable && (
+            <>
+              {movie?.year && <span>{movie.year}</span>}
+              {movie?.runtime && (
+                <>
+                  <span>•</span>
+                  <span>
+                    {Math.floor(movie.runtime / 60)}h {movie.runtime % 60}m
+                  </span>
+                </>
+              )}
+              <span>•</span>
+              <span>STREAM</span>
+            </>
+          )}
 
-          <span>
-            STREAM
-          </span>
+          {!isTV && !isPlayable && (
+            <>
+              {(movie?.release_date ||
+                movie?.first_air_date ||
+                movie?.releaseDate) && (
+                <span>
+                  {String(
+                    movie.release_date ||
+                      movie.first_air_date ||
+                      movie.releaseDate
+                  ).slice(0, 4)}
+                </span>
+              )}
 
+              {movie?.runtime && (
+                <>
+                  <span>•</span>
+                  <span>
+                    {Math.floor(movie.runtime / 60)}h {movie.runtime % 60}m
+                  </span>
+                </>
+              )}
+
+              <span>•</span>
+              <span>{showingVidSrc ? "STREAM" : "STREAM Preview"}</span>
+            </>
+          )}
         </div>
-
       </div>
 
-      {/* LOGO */}
-
       <div className="pointer-events-none absolute right-6 top-6 z-30">
-
         <span
-          className="text-lg font-semibold tracking-[0.18em] text-white/35"
-          style={{
-            fontFamily:
-              '"Cormorant Garamond", serif',
-          }}
+          className="text-xl font-semibold tracking-[0.18em] text-white/35"
+          style={{ fontFamily: '"Cormorant Garamond", serif' }}
         >
           STREAM
         </span>
-
       </div>
-
     </main>
   );
 }

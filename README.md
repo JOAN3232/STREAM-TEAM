@@ -1,165 +1,178 @@
-# STREAM-TEAM
+# STREAM-TEAM DevOps Deployment Guide
 
-Netflix-style streaming application with a React/Vite frontend and Spring Boot microservices.
+This repository contains the STREAM-TEAM application with the existing architecture preserved:
+
+- React/Vite frontend
+- Spring Boot backend
+- Spring Boot movie-service
+- Spring Cloud API Gateway
+- MongoDB
+- Docker / Docker Compose
+- Jenkins pipeline
+- Kubernetes manifests
 
 ## Architecture
 
-- `frontend` → React + Vite
-- `api-gateway` → Spring Cloud Gateway
-- `movie-service` → TMDB metadata + VidSrc playback abstraction
-- `auth-service` → registration, login, JWT, email verification
-- `user-service` → watchlist, history, subscriptions, payments
-
-## Services
-
-### Frontend
-- Local dev URL: `http://localhost:5173`
-- Required frontend env:
-  - `VITE_API_URL`
-
-### API Gateway
-- Port: `8080`
-- Routes:
-  - `/api/movies/**`
-  - `/api/auth/**`
-  - `/api/users/**`
-  - `/api/watchlist/**`
-  - `/api/history/**`
-  - `/api/subscriptions/**`
-  - `/api/payments/**`
-
-### Movie Service
-- Port: `8082`
-- Endpoints:
-  - `GET /api/movies/trending`
-  - `GET /api/movies/popular`
-  - `GET /api/movies/search?q=`
-  - `GET /api/movies/{tmdbId}`
-  - `GET /api/movies/{tmdbId}/videos`
-
-### Auth Service
-- Port: `8081`
-- Endpoints:
-  - `POST /api/auth/register`
-  - `POST /api/auth/login`
-  - `POST /api/auth/verify-email`
-  - `GET /api/auth/verify-email?token=...`
-  - `POST /api/auth/resend-verification`
-
-### User Service
-- Port: `8083`
-- Endpoints:
-  - `GET /api/users/me`
-  - `GET /api/watchlist`
-  - `POST /api/watchlist/{movieId}`
-  - `DELETE /api/watchlist/{movieId}`
-  - `GET /api/history`
-  - `POST /api/history`
-  - `GET /api/subscriptions/me`
-  - `POST /api/subscriptions`
-  - `POST /api/payments/initialize`
-  - `GET /api/payments/verify/{reference}`
-
-## Environment variables
-
-Copy `.env.example` to `.env` locally and fill in your real values.
-
-Never commit:
-- `.env`
-- MongoDB credentials
-- JWT secrets
-- TMDB credentials
-- Gmail SMTP credentials
-- Paystack secret keys
-
-## Local development
-
-### Frontend
-```bash
-cd frontend
-npm install
-npm run dev
+```text
+Browser
+  -> Frontend
+  -> API Gateway
+     -> Backend
+     -> Movie Service
+  -> MongoDB
 ```
 
-### Backend services
-Run each service separately or use Docker Compose.
+- The frontend is built as a production static site and served with nginx.
+- The API Gateway routes `/api/auth/**`, `/api/payments/**`, `/api/profiles/**`, and `/api/movies/**`.
+- MongoDB remains the persistent data store.
+- TMDB access stays on the backend/movie-service side.
 
-## Docker
+## Docker Compose
 
-### Start all services
-```bash
-docker compose up --build
+From the repository root:
+
+```sh
+docker compose config
+docker compose build
+docker compose up -d
+docker compose ps
+docker compose logs -f
+docker compose down
 ```
 
-### Start with local MongoDB container profile
-```bash
-docker compose --profile localdb up --build
+Frontend will be exposed on `http://localhost:5173` and the gateway on `http://localhost:8084` for local Docker Compose.
+
+Current production deployment URLs:
+
+- Frontend: `https://stream-team-seven.vercel.app`
+- API Gateway: `https://stream-api-gateway.onrender.com`
+- Backend: `https://stream-backend-n4em.onrender.com`
+- Movie Service: `https://stream-movie-service.onrender.com`
+
+## Jenkins Pipeline
+
+A root-level `Jenkinsfile` is included for:
+
+1. checkout
+2. frontend install
+3. frontend production build
+4. backend tests
+5. movie-service tests
+6. API gateway tests
+7. Docker Compose image build
+8. registry push
+9. Kubernetes deployment
+10. rollout wait and health checks
+
+The pipeline is designed to fail when any required build, test, Docker, or deployment step fails.
+
+## Kubernetes Deployment
+
+All Kubernetes manifests are in `k8s/`:
+
+- `namespace.yaml`
+- `configmap.yaml`
+- `secret.example.yaml`
+- `mongodb.yaml`
+- `backend.yaml`
+- `movie-service.yaml`
+- `api-gateway.yaml`
+- `frontend.yaml`
+- `ingress.yaml`
+
+Apply manually with:
+
+```sh
+kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/configmap.yaml
+kubectl apply -f k8s/mongodb.yaml
+kubectl apply -f k8s/backend.yaml
+kubectl apply -f k8s/movie-service.yaml
+kubectl apply -f k8s/api-gateway.yaml
+kubectl apply -f k8s/frontend.yaml
+kubectl apply -f k8s/ingress.yaml
 ```
 
-Notes:
-- If using MongoDB Atlas, keep `MONGODB_URI` pointed at Atlas.
-- The `mongodb` service is optional and placed behind the `localdb` profile.
-- Gateway is exposed on `http://localhost:8080`.
+Create secrets separately from real values:
 
-## Jenkins
+```sh
+kubectl create secret generic stream-team-secrets \
+  --namespace stream-team \
+  --from-literal=MONGODB_URI=... \
+  --from-literal=TMDB_API_KEY=... \
+  --from-literal=TMDB_READ_ACCESS_KEY=... \
+  --from-literal=PAYSTACK_SECRET_KEY=... \
+  --from-literal=PAYSTACK_CALLBACK_URL=... \
+  --from-literal=MAIL_USERNAME=... \
+  --from-literal=MAIL_APP_PASSWORD=...
+```
 
-A simple `Jenkinsfile` is included to:
-- checkout code
-- install frontend dependencies
-- build/test all Spring services
-- build frontend
-- build Docker images
+Check status with:
 
-## Deployment
+```sh
+kubectl get pods -n stream-team
+kubectl get svc -n stream-team
+kubectl get ingress -n stream-team
+kubectl rollout status deployment/backend -n stream-team
+kubectl rollout status deployment/movie-service -n stream-team
+kubectl rollout status deployment/api-gateway -n stream-team
+kubectl rollout status deployment/frontend -n stream-team
+```
 
-### Frontend on Vercel
-- Project root: `frontend`
-- Build command: `npm run build`
-- Output directory: `dist`
-- Environment variable:
-  - `VITE_API_URL=https://your-gateway-service.onrender.com`
+## Required Environment Variables / Secrets
 
-### Backend on Render
-Deploy each backend service separately as a Web Service:
-- `api-gateway`
-- `movie-service`
-- `auth-service`
-- `user-service`
+### Application / Docker / Kubernetes
 
-Suggested Render configuration:
-
-| Service | Root Dir | Build Command | Start Command |
-|--------|----------|---------------|---------------|
-| api-gateway | `api-gateway` | `mvn package -DskipTests` | `java -jar target/api-gateway-0.0.1-SNAPSHOT.jar` |
-| movie-service | `movie-service` | `./mvnw package -DskipTests` | `java -jar target/movie-service-0.0.1-SNAPSHOT.jar` |
-| auth-service | `auth-service` | `mvn package -DskipTests` | `java -jar target/auth-service-0.0.1-SNAPSHOT.jar` |
-| user-service | `user-service` | `mvn package -DskipTests` | `java -jar target/user-service-0.0.1-SNAPSHOT.jar` |
-
-Required backend environment variables depend on the service, but at minimum configure:
-- `CORS_ALLOWED_ORIGINS`
-- `JWT_SECRET`
 - `MONGODB_URI`
-- `TMDB_API_KEY` or `TMDB_READ_ACCESS_KEY`
+- `TMDB_API_KEY`
+- `TMDB_READ_ACCESS_KEY`
+- `PAYSTACK_SECRET_KEY`
+- `PAYSTACK_BASE_URL`
+- `PAYSTACK_CALLBACK_URL`
+- `MAIL_USERNAME`
+- `MAIL_APP_PASSWORD`
 - `MAIL_HOST`
 - `MAIL_PORT`
-- `MAIL_USERNAME`
-- `MAIL_PASSWORD`
-- `PAYSTACK_SECRET_KEY`
-- `PAYSTACK_PUBLIC_KEY`
-- `PAYSTACK_CALLBACK_URL`
-- `FRONTEND_URL`
-- service-to-service URLs for the gateway
+- `APP_FRONTEND_BASE_URL`
+- `CORS_ALLOWED_ORIGINS`
+- `TMDB_BASE_URL`
+- `TMDB_IMAGE_BASE_URL`
+- `VIDSRC_BASE_URL`
+- `VITE_API_GATEWAY_URL`
+- `MOVIE_SERVICE_URL`
+- `AUTH_SERVICE_URL`
+- `USER_SERVICE_URL`
 
-### CORS
-Do not use wildcard CORS in production.
-Set `CORS_ALLOWED_ORIGINS` to your local frontend URLs and Vercel production domain.
+Recommended production values for the current deployment:
 
-## Validation commands
+- `VITE_API_GATEWAY_URL=https://stream-api-gateway.onrender.com`
+- `APP_FRONTEND_BASE_URL=https://stream-team-seven.vercel.app`
+- `CORS_ALLOWED_ORIGINS=https://stream-team-seven.vercel.app`
+- `MOVIE_SERVICE_URL=https://stream-movie-service.onrender.com`
+- `AUTH_SERVICE_URL=https://stream-backend-n4em.onrender.com`
+- `USER_SERVICE_URL=https://stream-backend-n4em.onrender.com`
 
-```bash
-cd movie-service && ./mvnw test
-cd api-gateway && mvn test
-cd auth-service && mvn test
-cd user-service && mvn test
-cd frontend && npm run build
-```
+### Jenkins Credentials / Variables
+
+- `stream-team-registry-url`
+- `stream-team-registry-namespace`
+- `stream-team-registry-creds`
+- `stream-team-kubeconfig`
+- `stream-team-kube-context`
+- `stream-team-vite-api-gateway-url`
+- `stream-team-mongodb-uri`
+- `stream-team-tmdb-api-key`
+- `stream-team-tmdb-read-access-key`
+- `stream-team-paystack-secret-key`
+- `stream-team-paystack-callback-url`
+- `stream-team-mail-username`
+- `stream-team-mail-app-password`
+- `stream-team-app-frontend-base-url`
+- `stream-team-cors-allowed-origins`
+
+## Notes
+
+- No real secrets are committed in Git.
+- Kubernetes image names default to local tags in the manifests; Jenkins updates them to pushed registry tags during deployment.
+- The nginx ingress host in `k8s/ingress.yaml` should be replaced with your real production domain.
+- If your cluster does not use nginx ingress, adapt `ingressClassName` or omit the ingress manifest.

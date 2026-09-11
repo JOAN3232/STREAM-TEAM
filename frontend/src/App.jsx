@@ -1,8 +1,4 @@
-import {
-  Routes,
-  Route,
-  useLocation,
-} from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
@@ -15,15 +11,19 @@ import Login from "./pages/Login";
 import RegisterIntro from "./pages/RegisterIntro";
 import VerifyEmail from "./pages/VerifyEmail";
 import Plans from "./pages/Plans";
+import SetPassword from "./pages/SetPassword";
 import Payment from "./pages/Payment";
-
+import PaymentCallback from "./pages/PaymentCallback";
 import WhosWatching from "./pages/WhosWatching";
+import TVShows from "./pages/TVShows";
+import NewPopular from "./pages/New-Poplular";
+import MyList from "./pages/MyList";
+import Settings from "./pages/Settings";
+
 import Browse from "./pages/Browse";
+import Movies from "./pages/Movies";
 import MovieDetails from "./pages/MovieDetails";
 import Player from "./pages/Player";
-
-import MyList from "./pages/MyList";
-import Account from "./pages/Account";
 
 function Home() {
   return (
@@ -45,146 +45,53 @@ export default function App() {
   const location = useLocation();
 
   return (
-    <div
-      key={location.pathname}
-      className="page-transition"
-    >
+    <div key={location.pathname} className="page-transition">
       <Routes location={location}>
+        {/* PUBLIC */}
 
-        {/* =================================================
-            LANDING
-        ================================================= */}
+        <Route path="/" element={<Home />} />
 
-        <Route
-          path="/"
-          element={<Home />}
-        />
+        <Route path="/login" element={<Login />} />
 
-        {/* =================================================
-            AUTH
-        ================================================= */}
+        <Route path="/register-intro" element={<RegisterIntro />} />
 
-        <Route
-          path="/login"
-          element={<Login />}
-        />
+        <Route path="/verify-email" element={<VerifyEmail />} />
 
-        <Route
-          path="/register-intro"
-          element={<RegisterIntro />}
-        />
+        <Route path="/set-password" element={<SetPassword />} />
 
-        <Route
-          path="/verify-email"
-          element={<VerifyEmail />}
-        />
+        <Route path="/plans" element={<Plans />} />
 
-        {/* =================================================
-            PLANS / PAYMENT
-        ================================================= */}
+        <Route path="/payment" element={<Payment />} />
 
-        <Route
-          path="/plans"
-          element={<Plans />}
-        />
+        <Route path="/payment/callback" element={<PaymentCallback />} />
 
-        <Route
-          path="/payment"
-          element={<Payment />}
-        />
+        {/* STREAM APP */}
 
-        {/* =================================================
-            PROFILES
-        ================================================= */}
+        <Route path="/whos-watching" element={<WhosWatching />} />
 
-        <Route
-          path="/whos-watching"
-          element={<WhosWatching />}
-        />
+        <Route path="/browse" element={<Browse />} />
 
-        {/* =================================================
-            BROWSE
-        ================================================= */}
+        <Route path="/movies" element={<Movies />} />
 
-        <Route
-          path="/browse"
-          element={<Browse />}
-        />
+        {/* DETAILS */}
 
-        {/* =================================================
-            USER
-        ================================================= */}
+        <Route path="/title/:id" element={<MovieDetails />} />
 
-        <Route
-          path="/my-list"
-          element={<MyList />}
-        />
+        <Route path="/title/:mediaType/:id" element={<MovieDetails />} />
 
-        <Route
-          path="/account"
-          element={<Account />}
-        />
+        {/* PLAYER */}
 
-        {/* =================================================
-            TITLE DETAILS
+        <Route path="/watch/movie/:id" element={<Player />} />
 
-            Old movie URL still works:
-            /title/550
+        <Route path="/watch/:mediaType/:id" element={<Player />} />
 
-            New universal URLs:
-            /title/movie/550
-            /title/tv/1399
-        ================================================= */}
+        <Route path="/tv-shows" element={<TVShows />} />
 
-        <Route
-          path="/title/:id"
-          element={<MovieDetails />}
-        />
+        <Route path="/new-popular" element={<NewPopular />} />
 
-        <Route
-          path="/title/:mediaType/:id"
-          element={<MovieDetails />}
-        />
+        <Route path="/my-list" element={<MyList />} />
 
-        {/* =================================================
-            MOVIE WATCH
-        ================================================= */}
-
-        <Route
-          path="/watch/movie/:id"
-          element={<Player />}
-        />
-
-        {/* =================================================
-            TV EPISODE WATCH
-
-            Example:
-
-            /watch/tv/1399/1/1
-
-            = TV ID 1399
-            = Season 1
-            = Episode 1
-        ================================================= */}
-
-        <Route
-          path="/watch/tv/:id/:seasonNumber/:episodeNumber"
-          element={<Player />}
-        />
-
-        {/* =================================================
-            GENERIC WATCH FALLBACK
-
-            Keeps existing links such as:
-
-            /watch/tv/1399
-        ================================================= */}
-
-        <Route
-          path="/watch/:mediaType/:id"
-          element={<Player />}
-        />
-
+        <Route path="/settings" element={<Settings />} />
       </Routes>
     </div>
   );

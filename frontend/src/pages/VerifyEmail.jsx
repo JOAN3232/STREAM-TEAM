@@ -1,82 +1,85 @@
-import { useEffect, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { resendVerification, verifyEmailToken } from "../services/authService";
+import { useState } from "react";
+import {
+  Link,
+  useSearchParams,
+} from "react-router-dom";
+
+import {
+  sendVerificationEmail,
+} from "../services/authService";
 
 export default function VerifyEmail() {
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
   const email = searchParams.get("email") || "";
-  const token = searchParams.get("token") || "";
 
-  const [status, setStatus] = useState(token ? "verifying" : "pending");
-  const [message, setMessage] = useState("");
-  const [resending, setResending] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
+  const [promotions, setPromotions] = useState(true);
 
-  useEffect(() => {
-    if (!token) return;
+  const isValidEmail =
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-    let active = true;
-
-    const runVerification = async () => {
-      try {
-        const data = await verifyEmailToken(token);
-
-        if (!active) return;
-
-        if (data?.token) {
-          localStorage.setItem("token", data.token);
-        }
-
-        setStatus("success");
-        setMessage(data?.message || "Your email has been verified.");
-      } catch (error) {
-        if (!active) return;
-        setStatus("error");
-        setMessage(error.message || "Invalid or expired verification token.");
-      }
-    };
-
-    runVerification();
-
-    return () => {
-      active = false;
-    };
-  }, [token]);
-
-  const handleResend = async () => {
-    if (!email || resending) return;
+  const handleSendLink = async () => {
+    if (!isValidEmail || loading || sent) {
+      return;
+    }
 
     try {
-      setResending(true);
-      const data = await resendVerification(email);
-      setStatus("resent");
-      setMessage(data?.message || "Verification email sent.");
-    } catch (error) {
-      setStatus("error");
-      setMessage(error.message || "Could not resend verification email.");
-    } finally {
-      setResending(false);
-    }
-  };
+      setLoading(true);
+      setError("");
 
-  const handleContinue = () => {
-    navigate(`/plans?email=${encodeURIComponent(email)}`);
+      await sendVerificationEmail(
+        email,
+        email.split("@")[0]
+      );
+
+      setSent(true);
+    } catch (error) {
+      console.error(
+        "Failed to send verification email:",
+        error
+      );
+
+      setError(
+        "We couldn't send your verification email. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#07050d] text-white">
+
+      {/* =====================================
+          AMBIENT BACKGROUND
+      ====================================== */}
+
       <div className="pointer-events-none absolute inset-0">
+
         <div className="absolute left-1/2 top-[43%] h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-violet-700/[0.09] blur-[170px]" />
+
         <div className="absolute bottom-[-150px] left-1/2 h-[330px] w-[700px] -translate-x-1/2 rounded-full bg-fuchsia-600/[0.04] blur-[160px]" />
+
       </div>
 
+      {/* =====================================
+          NAV
+      ====================================== */}
+
       <header className="relative z-30">
+
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-6 sm:px-10 lg:px-14">
+
           <Link
             to="/"
-            className="text-2xl font-bold tracking-[0.16em] text-violet-400 sm:text-3xl"
-            style={{ fontFamily: '"Cormorant Garamond", serif' }}
+            className="text-2xl font-bold tracking-[0.16em] text-violet-400 transition hover:text-violet-300 sm:text-3xl"
+            style={{
+              fontFamily:
+                '"Cormorant Garamond", serif',
+            }}
           >
             STREAM
           </Link>
@@ -87,124 +90,347 @@ export default function VerifyEmail() {
           >
             Sign In
           </Link>
+
         </div>
+
       </header>
 
-      <section className="relative z-10 mx-auto flex min-h-[calc(100vh-88px)] max-w-6xl flex-col px-6 pb-8 sm:px-10 lg:px-14">
+      {/* =====================================
+          PAGE
+      ====================================== */}
+
+      <section className="relative z-10 mx-auto flex min-h-[calc(100vh-88px)] max-w-6xl flex-col px-6 pb-10 sm:px-10 lg:px-14">
+
+        {/* TOP ROW */}
+
         <div className="flex items-center justify-between pt-4">
+
           <Link
-            to={email ? `/register-intro?email=${encodeURIComponent(email)}` : "/register-intro"}
+            to={`/register-intro?email=${encodeURIComponent(
+              email
+            )}`}
             className="group flex items-center gap-3 text-sm text-white/45 transition hover:text-violet-300"
           >
-            <span className="text-lg transition-transform duration-300 group-hover:-translate-x-1">←</span>
+            <span className="text-lg transition-transform duration-300 group-hover:-translate-x-1">
+              ←
+            </span>
+
             <span>Back</span>
           </Link>
 
           <span className="text-[11px] font-semibold uppercase tracking-[0.32em] text-violet-400">
             Step 1 of 3
           </span>
+
         </div>
 
-        <div className="flex flex-1 items-center justify-center py-5">
-          <div className="w-full max-w-[720px] text-center">
-            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-[24px] border border-violet-400/35 bg-violet-500/[0.045] shadow-[0_0_55px_rgba(139,92,246,0.12)]">
-              {status === "verifying" ? (
-                <div className="h-9 w-9 animate-spin rounded-full border-2 border-violet-400/25 border-t-violet-400" />
-              ) : (
-                <svg
-                  viewBox="0 0 24 24"
-                  className="h-9 w-9 fill-none stroke-violet-400"
-                  strokeWidth="1.7"
-                >
-                  <rect x="3" y="5" width="18" height="14" rx="2" />
-                  <path d="m4 7 8 6 8-6" />
-                </svg>
-              )}
+        {/* =====================================
+            CONTENT
+        ====================================== */}
+
+        <div className="flex flex-1 items-center justify-center py-7">
+
+          <div className="relative w-full max-w-[680px] text-center">
+
+            {/* AMBIENT CARD GLOW */}
+
+            <div className="pointer-events-none absolute left-1/2 top-[45%] h-[380px] w-[620px] max-w-[90vw] -translate-x-1/2 -translate-y-1/2 rounded-full bg-violet-600/[0.05] blur-[110px]" />
+
+            {/* ICON */}
+
+            <div className="relative mx-auto flex h-20 w-20 items-center justify-center rounded-[24px] border border-violet-400/25 bg-violet-500/[0.055] shadow-[0_0_55px_rgba(139,92,246,0.13)] backdrop-blur-xl">
+
+              <svg
+                viewBox="0 0 24 24"
+                className="h-9 w-9 fill-none stroke-violet-300"
+                strokeWidth="1.7"
+              >
+                <rect
+                  x="3"
+                  y="5"
+                  width="18"
+                  height="14"
+                  rx="2"
+                />
+
+                <path d="m4 7 8 6 8-6" />
+              </svg>
+
             </div>
 
-            <p className="mt-7 text-[11px] font-semibold uppercase tracking-[0.32em] text-violet-400">
+            {/* LABEL */}
+
+            <p className="relative mt-7 text-[10px] font-semibold uppercase tracking-[0.34em] text-violet-400">
               Email verification
             </p>
 
+            {/* TITLE */}
+
             <h1
-              className="mt-4 text-5xl font-semibold leading-[0.98] text-white sm:text-6xl"
-              style={{ fontFamily: '"Cormorant Garamond", serif' }}
+              className="relative mt-4 text-5xl font-semibold leading-[0.98] text-white sm:text-6xl"
+              style={{
+                fontFamily:
+                  '"Cormorant Garamond", serif',
+              }}
             >
-              {status === "verifying" && "Verifying your email."}
-              {status === "pending" && "Check your email."}
-              {status === "success" && "Email verified."}
-              {status === "resent" && "Verification sent again."}
-              {status === "error" && "Verification failed."}
+              {sent
+                ? "Check your inbox."
+                : "Verify your email."}
             </h1>
 
-            <p className="mx-auto mt-6 max-w-lg text-sm leading-6 text-white/48 sm:text-base">
-              {status === "verifying" && "We are validating your verification link now."}
-              {status === "pending" && "We sent a verification link to your email address. Open it to activate your account."}
-              {status === "success" && (message || "Your email has been verified successfully.")}
-              {status === "resent" && (message || "A new verification email has been sent.")}
-              {status === "error" && (message || "This verification link is invalid or has expired.")}
-            </p>
+            {/* =====================================
+                BEFORE SEND
+            ====================================== */}
 
-            {email && (
-              <p className="mt-3 break-all text-base font-semibold text-white/90">
-                {email}
-              </p>
-            )}
-
-            <div className="mx-auto mt-7 flex max-w-[600px] items-center gap-4 rounded-2xl border border-white/[0.08] bg-white/[0.025] px-5 py-4 text-left backdrop-blur-xl">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-500/[0.09]">
-                <svg
-                  viewBox="0 0 24 24"
-                  className="h-5 w-5 fill-none stroke-violet-400"
-                  strokeWidth="1.7"
-                >
-                  <path d="M12 3 5 6v5c0 5 3.5 8 7 10 3.5-2 7-5 7-10V6l-7-3Z" />
-                  <path d="M12 8v4" />
-                  <path d="M12 15h.01" />
-                </svg>
-              </div>
-
-              <div>
-                <p className="text-sm font-medium text-white/90">For your security</p>
-                <p className="mt-1 text-sm leading-6 text-white/45">
-                  Verification links expire automatically. If your link is invalid or expired, request a new one below.
+            {!sent ? (
+              <>
+                <p className="relative mx-auto mt-6 max-w-lg text-sm leading-6 text-white/48 sm:text-base">
+                  We&apos;ll send a secure sign-up
+                  link to your email so you can
+                  continue creating your STREAM
+                  account.
                 </p>
-              </div>
-            </div>
 
-            <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              {status === "success" ? (
+                {/* EMAIL DISPLAY */}
+
+                <div className="relative mx-auto mt-8 max-w-[560px] rounded-2xl border border-white/[0.08] bg-white/[0.025] px-5 py-4 text-left backdrop-blur-xl">
+
+                  <p className="text-[10px] uppercase tracking-[0.24em] text-white/28">
+                    Email address
+                  </p>
+
+                  <div className="mt-1 flex items-center justify-between gap-4">
+
+                    <p className="min-w-0 truncate text-sm font-medium text-white/85">
+                      {email ||
+                        "No email provided"}
+                    </p>
+
+                    {isValidEmail && (
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-violet-400/20 bg-violet-500/[0.08]">
+
+                        <svg
+                          viewBox="0 0 24 24"
+                          className="h-3.5 w-3.5 fill-none stroke-violet-300"
+                          strokeWidth="2"
+                        >
+                          <path d="m5 12 4 4L19 6" />
+                        </svg>
+
+                      </div>
+                    )}
+
+                  </div>
+
+                </div>
+
+                {/* INVALID EMAIL */}
+
+                {!isValidEmail && (
+                  <div className="relative mx-auto mt-4 max-w-[560px] rounded-xl border border-red-400/20 bg-red-500/[0.08] px-4 py-3 text-sm text-red-200">
+                    Please go back and enter a valid
+                    email address.
+                  </div>
+                )}
+
+                {/* ERROR */}
+
+                {error && (
+                  <div className="relative mx-auto mt-4 max-w-[560px] rounded-xl border border-red-400/20 bg-red-500/[0.08] px-4 py-3 text-sm text-red-200">
+                    {error}
+                  </div>
+                )}
+
+                {/* PROMOTIONS */}
+
+                <label className="relative mx-auto mt-6 flex max-w-[560px] cursor-pointer items-start gap-3 rounded-xl border border-white/[0.06] bg-white/[0.018] px-4 py-3 text-left text-sm text-white/45">
+
+                  <input
+                    type="checkbox"
+                    checked={promotions}
+                    onChange={(event) =>
+                      setPromotions(
+                        event.target.checked
+                      )
+                    }
+                    className="mt-1 h-4 w-4 shrink-0 accent-violet-500"
+                  />
+
+                  <span>
+                    Send me STREAM recommendations,
+                    updates and special offers.
+                  </span>
+
+                </label>
+
+                {/* SEND BUTTON */}
+
                 <button
                   type="button"
-                  onClick={handleContinue}
-                  className="flex h-14 min-w-[220px] items-center justify-center rounded-xl bg-gradient-to-r from-violet-700 via-purple-600 to-fuchsia-600 px-6 font-semibold text-white shadow-[0_12px_45px_rgba(126,34,206,0.25)] transition duration-300 hover:scale-[1.01]"
-                >
-                  Continue to plans
-                  <span className="ml-2">→</span>
-                </button>
-              ) : (
-                email && (
-                  <button
-                    type="button"
-                    onClick={handleResend}
-                    disabled={resending}
-                    className="flex h-14 min-w-[220px] items-center justify-center rounded-xl border border-white/15 bg-white/[0.04] px-6 font-semibold text-white transition duration-300 hover:border-violet-400/40 hover:bg-violet-500/[0.06] disabled:opacity-60"
-                  >
-                    {resending ? "Sending..." : "Resend verification email"}
-                  </button>
-                )
-              )}
+                  onClick={handleSendLink}
+                  disabled={
+                    !isValidEmail ||
+                    loading ||
+                    sent
+                  }
+                  className="
+                    group
+                    relative
+                    mx-auto
+                    mt-7
+                    flex
+                    h-16
+                    w-full
+                    max-w-[560px]
+                    items-center
+                    justify-center
+                    rounded-xl
 
-              <Link
-                to="/login"
-                className="flex h-14 min-w-[220px] items-center justify-center rounded-xl text-sm font-semibold text-white/65 transition hover:text-violet-300"
-              >
-                Back to sign in
-              </Link>
-            </div>
+                    bg-gradient-to-r
+                    from-[#7b00ff]
+                    via-[#a400ff]
+                    to-[#d000d7]
+
+                    text-base
+                    font-semibold
+                    text-white
+
+                    shadow-[0_16px_55px_rgba(126,34,206,0.27)]
+
+                    transition
+                    duration-300
+
+                    hover:scale-[1.01]
+                    hover:shadow-[0_18px_70px_rgba(168,85,247,0.34)]
+
+                    disabled:cursor-not-allowed
+                    disabled:opacity-50
+                    disabled:hover:scale-100
+                  "
+                >
+
+                  {loading ? (
+                    <span className="flex items-center gap-3">
+
+                      <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+
+                      Sending...
+
+                    </span>
+                  ) : (
+                    <>
+                      Send Verification Link
+
+                      <span className="ml-3 transition-transform duration-300 group-hover:translate-x-1">
+                        →
+                      </span>
+                    </>
+                  )}
+
+                </button>
+              </>
+            ) : (
+              /* =====================================
+                  SENT STATE
+              ====================================== */
+
+              <div className="relative">
+
+                <p className="mx-auto mt-6 max-w-lg text-sm leading-6 text-white/48 sm:text-base">
+                  We&apos;ve sent a secure
+                  verification link to
+                </p>
+
+                <p className="mt-1 break-all text-base font-semibold text-white/90">
+                  {email}
+                </p>
+
+                {/* SENT CARD */}
+
+                <div className="mx-auto mt-8 max-w-[560px] rounded-2xl border border-violet-400/[0.14] bg-violet-500/[0.055] px-5 py-5 text-left backdrop-blur-xl">
+
+                  <div className="flex items-start gap-4">
+
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-violet-400/20 bg-violet-500/[0.09]">
+
+                      <svg
+                        viewBox="0 0 24 24"
+                        className="h-5 w-5 fill-none stroke-violet-300"
+                        strokeWidth="1.8"
+                      >
+                        <path d="m5 12 4 4L19 6" />
+                      </svg>
+
+                    </div>
+
+                    <div>
+
+                      <p className="text-sm font-medium text-white/90">
+                        Verification email sent
+                      </p>
+
+                      <p className="mt-1 text-sm leading-6 text-white/40">
+                        Open the email and follow the
+                        link to set your password and
+                        finish creating your STREAM
+                        account.
+                      </p>
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+                {/* SECURITY NOTE */}
+
+                <div className="mx-auto mt-5 flex max-w-[560px] items-center gap-4 rounded-2xl border border-white/[0.07] bg-white/[0.02] px-5 py-4 text-left">
+
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-500/[0.07]">
+
+                    <svg
+                      viewBox="0 0 24 24"
+                      className="h-4.5 w-4.5 fill-none stroke-violet-300"
+                      strokeWidth="1.7"
+                    >
+                      <path d="M12 3 5 6v5c0 5 3.5 8 7 10 3.5-2 7-5 7-10V6l-7-3Z" />
+                    </svg>
+
+                  </div>
+
+                  <p className="text-sm leading-5 text-white/38">
+                    For your security, only use the
+                    link sent directly to your email.
+                  </p>
+
+                </div>
+
+                {/* RESEND */}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSent(false);
+                    setError("");
+                  }}
+                  className="mt-7 text-sm font-medium text-violet-300 transition hover:text-violet-200"
+                >
+                  Didn&apos;t receive it? Send again
+                </button>
+
+              </div>
+            )}
+
           </div>
+
         </div>
+
       </section>
+
+      {/* BOTTOM ACCENT */}
+
+      <div className="pointer-events-none fixed bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-violet-500 to-transparent shadow-[0_-8px_35px_rgba(168,85,247,0.45)]" />
+
     </main>
   );
 }

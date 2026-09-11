@@ -388,7 +388,11 @@ public class TmdbClient implements TmdbOperations {
 
                                 throw new ApiException(
                                         HttpStatus.NOT_FOUND,
+<<<<<<< HEAD
                                         "TMDB title not found."
+=======
+                                        "Movie not found."
+>>>>>>> praise-update-worktree-save
                                 );
                             }
                     )
