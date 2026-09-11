@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { paymentsApiUrl } from "../services/api";
 
 export default function PaymentCallback() {
   const navigate = useNavigate();
@@ -20,7 +21,7 @@ export default function PaymentCallback() {
 
       try {
         const response = await fetch(
-          `http://localhost:8081/api/payments/verify/${reference}`
+          paymentsApiUrl(`/verify/${reference}`)
         );
 
         if (!response.ok) {

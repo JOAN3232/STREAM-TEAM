@@ -67,7 +67,7 @@ services:
     build:
       context: ./frontend
       args:
-        VITE_API_GATEWAY_URL: ${VITE_API_GATEWAY_URL:-http://localhost:8084}
+        VITE_API_GATEWAY_URL: ${VITE_API_GATEWAY_URL:-https://stream-api-gateway.onrender.com}
     container_name: stream-frontend
     restart: unless-stopped
     ports:

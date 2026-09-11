@@ -9,8 +9,10 @@ import { useNavigate } from "react-router-dom";
 import StreamingLayout from "../components/StreamingLayout";
 
 import {
+  getBrowseContent,
   getPosterUrl,
   getBackdropUrl,
+  searchMovies,
 } from "../services/tmdbService";
 
 const DISPLAY_FONT = {
@@ -88,9 +90,7 @@ export default function Movies() {
   const [movies, setMovies] =
     useState([]);
 
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [loadingMore, setLoadingMore] = useState(false);  
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const [loading, setLoading] =
     useState(true);
@@ -104,99 +104,56 @@ export default function Movies() {
   const [sort, setSort] =
     useState("popular");
 
-  const loadMovies = async (pageNumber = 1) => {
-    try {
-      if (pageNumber === 1) {
+  useEffect(() => {
+    const loadMovies = async () => {
+      try {
         setLoading(true);
-      } else {
-        setLoadingMore(true);
-      }
-  
-      setError("");
-  
-      const response = await fetch(
-        `https://api.themoviedb.org/3/discover/movie?include_adult=false&include_video=false&language=en-US&page=${pageNumber}&sort_by=popularity.desc`,
-        {
-          headers: {
-            Authorization: `Bearer ${import.meta.env.VITE_TMDB_TOKEN}`,
-            accept: "application/json",
-          },
-        }
-      );
-  
-      if (!response.ok) {
-        throw new Error(
-          `TMDB request failed with status ${response.status}`
-        );
-      }
-  
-      const data = await response.json();
-  
-      setTotalPages(data.total_pages || 1);
-  
-      setMovies((currentMovies) => {
-        const combined =
-          pageNumber === 1
-            ? data.results || []
-            : [
-                ...currentMovies,
-                ...(data.results || []),
-              ];
-  
+        setError("");
+
+        const data = await getBrowseContent();
+        const combined = [
+          ...(data.movies || []),
+          ...(data.popular || []),
+          ...(data.topRated || []),
+          ...(data.action || []),
+          ...(data.comedy || []),
+          ...(data.drama || []),
+        ];
+
         const seen = new Set();
-  
-        return combined.filter((movie) => {
-          if (!movie?.id) {
+
+        const uniqueMovies = combined.filter((item) => {
+          if (!item?.id) {
             return false;
           }
-  
-          if (seen.has(movie.id)) {
+
+          if (item.media_type === "tv") {
             return false;
           }
-  
-          seen.add(movie.id);
-  
+
+          if (seen.has(item.id)) {
+            return false;
+          }
+
+          seen.add(item.id);
           return true;
         });
-      });
-  
-      setPage(pageNumber);
-    } catch (error) {
-      console.error(
-        "Failed to load movies:",
-        error
-      );
-  
-      setError(
-        "STREAM could not load movies right now."
-      );
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
-    }
-  };
-  
-  useEffect(() => {
-    loadMovies(1);
-  }, []);  
+
+        setMovies(uniqueMovies);
+      } catch {
+        setError("STREAM could not load movies right now.");
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
+      }
+    };
+
+    loadMovies();
+  }, []);
 
   const displayedMovies =
     useMemo(() => {
       let result = [...movies];
-
-      if (query.trim()) {
-        const search =
-          query
-            .trim()
-            .toLowerCase();
-
-        result =
-          result.filter((movie) =>
-            titleOf(movie)
-              .toLowerCase()
-              .includes(search)
-          );
-      }
 
       if (sort === "rating") {
         result.sort(
@@ -458,15 +415,38 @@ export default function Movies() {
             {/* PAGINATION */}
             <div className="mt-16 flex flex-col items-center justify-center">
               <p className="mb-4 text-[9px] uppercase tracking-[0.2em] text-white/25">
-                Page {page} of {totalPages}
+                Explore more from the STREAM catalog
               </p>
       
-              {page < totalPages && (
                 <button
                   type="button"
-                  onClick={() =>
-                    loadMovies(page + 1)
-                  }
+                  onClick={async () => {
+                    try {
+                      setLoadingMore(true);
+                      setError("");
+                      const results = await searchMovies(query || "popular");
+                      if (Array.isArray(results) && results.length > 0) {
+                        setMovies((current) => {
+                          const combined = [...current, ...results];
+                          const seen = new Set();
+                          return combined.filter((item) => {
+                            if (!item?.id || item.media_type === "tv") {
+                              return false;
+                            }
+                            if (seen.has(item.id)) {
+                              return false;
+                            }
+                            seen.add(item.id);
+                            return true;
+                          });
+                        });
+                      }
+                    } catch {
+                      setError("STREAM could not load more movies right now.");
+                    } finally {
+                      setLoadingMore(false);
+                    }
+                  }}
                   disabled={loadingMore}
                   className="
                     min-w-[180px]
@@ -491,7 +471,6 @@ export default function Movies() {
                     ? "Loading movies..."
                     : "Load more movies"}
                 </button>
-              )}
             </div>
           </>
         ) : (

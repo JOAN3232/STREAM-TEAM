@@ -7,8 +7,7 @@ import {
   CHARACTER_AVATARS,
   getProfileAvatar,
 } from "../data/profileAvatars";
-
-const PROFILE_API = "http://localhost:8081/api/profiles";
+import { profilesApiUrl } from "../services/api";
 
 const UI_FONT = {
   fontFamily:
@@ -204,7 +203,7 @@ export default function Settings() {
       setProfileMessage("");
 
       const response = await fetch(
-        `${PROFILE_API}/${activeProfile.id}`,
+        profilesApiUrl(`/${activeProfile.id}`),
         {
           method: "PUT",
           headers: {

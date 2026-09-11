@@ -40,7 +40,14 @@ docker compose logs -f
 docker compose down
 ```
 
-Frontend will be exposed on `http://localhost:5173` and the gateway on `http://localhost:8084`.
+Frontend will be exposed on `http://localhost:5173` and the gateway on `http://localhost:8084` for local Docker Compose.
+
+Current production deployment URLs:
+
+- Frontend: `https://stream-team-seven.vercel.app`
+- API Gateway: `https://stream-api-gateway.onrender.com`
+- Backend: `https://stream-backend-n4em.onrender.com`
+- Movie Service: `https://stream-movie-service.onrender.com`
 
 ## Jenkins Pipeline
 
@@ -135,6 +142,15 @@ kubectl rollout status deployment/frontend -n stream-team
 - `MOVIE_SERVICE_URL`
 - `AUTH_SERVICE_URL`
 - `USER_SERVICE_URL`
+
+Recommended production values for the current deployment:
+
+- `VITE_API_GATEWAY_URL=https://stream-api-gateway.onrender.com`
+- `APP_FRONTEND_BASE_URL=https://stream-team-seven.vercel.app`
+- `CORS_ALLOWED_ORIGINS=https://stream-team-seven.vercel.app`
+- `MOVIE_SERVICE_URL=https://stream-movie-service.onrender.com`
+- `AUTH_SERVICE_URL=https://stream-backend-n4em.onrender.com`
+- `USER_SERVICE_URL=https://stream-backend-n4em.onrender.com`
 
 ### Jenkins Credentials / Variables
 

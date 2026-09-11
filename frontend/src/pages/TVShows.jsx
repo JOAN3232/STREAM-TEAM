@@ -9,8 +9,10 @@ import { useNavigate } from "react-router-dom";
 import StreamingLayout from "../components/StreamingLayout";
 
 import {
+  getBrowseContent,
   getPosterUrl,
   getBackdropUrl,
+  searchTvShows,
 } from "../services/tmdbService";
 
 const DISPLAY_FONT = {
@@ -80,12 +82,6 @@ export default function TVShows() {
   const [shows, setShows] =
     useState([]);
 
-  const [page, setPage] =
-    useState(1);
-
-  const [totalPages, setTotalPages] =
-    useState(1);
-
   const [loadingMore, setLoadingMore] =
     useState(false);
 
@@ -101,96 +97,54 @@ export default function TVShows() {
   const [sort, setSort] =
     useState("popular");
 
-  /* =========================================
-     LOAD TV SHOWS FROM TMDB PAGE BY PAGE
-  ========================================= */
-
-  const loadShows = async (
-    pageNumber = 1
-  ) => {
-    try {
-      if (pageNumber === 1) {
-        setLoading(true);
-      } else {
-        setLoadingMore(true);
-      }
-
-      setError("");
-
-      const response = await fetch(
-        `https://api.themoviedb.org/3/discover/tv?include_adult=false&language=en-US&page=${pageNumber}&sort_by=popularity.desc`,
-        {
-          headers: {
-            Authorization: `Bearer ${
-              import.meta.env.VITE_TMDB_TOKEN
-            }`,
-            accept: "application/json",
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(
-          `TMDB request failed with status ${response.status}`
-        );
-      }
-
-      const data =
-        await response.json();
-
-      setTotalPages(
-        data.total_pages || 1
-      );
-
-      setShows((currentShows) => {
-        const combined =
-          pageNumber === 1
-            ? data.results || []
-            : [
-                ...currentShows,
-                ...(data.results || []),
-              ];
-
-        const seen =
-          new Set();
-
-        return combined.filter(
-          (show) => {
-            if (!show?.id) {
-              return false;
-            }
-
-            if (
-              seen.has(show.id)
-            ) {
-              return false;
-            }
-
-            seen.add(show.id);
-
-            return true;
-          }
-        );
-      });
-
-      setPage(pageNumber);
-    } catch (error) {
-      console.error(
-        "Failed to load TV shows:",
-        error
-      );
-
-      setError(
-        "STREAM could not load TV shows right now."
-      );
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
-    }
-  };
-
   useEffect(() => {
-    loadShows(1);
+    const loadShows = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const data = await getBrowseContent();
+        const combined = [
+          ...(data.tv || []),
+          ...(data.popular || []),
+          ...(data.topRatedTv || data.topRated || []),
+          ...(data.airingToday || []),
+        ];
+
+        const seen = new Set();
+
+        const uniqueShows = combined.filter((item) => {
+          if (!item?.id) {
+            return false;
+          }
+
+          const isTV =
+            item.media_type === "tv" ||
+            Boolean(item.first_air_date) ||
+            Boolean(item.name);
+
+          if (!isTV) {
+            return false;
+          }
+
+          if (seen.has(item.id)) {
+            return false;
+          }
+
+          seen.add(item.id);
+          return true;
+        });
+
+        setShows(uniqueShows);
+      } catch {
+        setError("STREAM could not load TV shows right now.");
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
+      }
+    };
+
+    loadShows();
   }, []);
 
   /* =========================================
@@ -200,20 +154,6 @@ export default function TVShows() {
   const displayedShows =
     useMemo(() => {
       let result = [...shows];
-
-      if (query.trim()) {
-        const search =
-          query
-            .trim()
-            .toLowerCase();
-
-        result =
-          result.filter((show) =>
-            titleOf(show)
-              .toLowerCase()
-              .includes(search)
-          );
-      }
 
       if (sort === "rating") {
         result.sort(
@@ -517,21 +457,45 @@ export default function TVShows() {
 
             <div className="mt-16 flex flex-col items-center justify-center">
               <p className="mb-4 text-[9px] uppercase tracking-[0.2em] text-white/25">
-                Page {page} of{" "}
-                {totalPages}
+                Explore more from the STREAM catalog
               </p>
 
-              {page < totalPages && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    loadShows(
-                      page + 1
-                    )
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    setLoadingMore(true);
+                    setError("");
+                    const results = await searchTvShows(query || "popular");
+                    if (Array.isArray(results) && results.length > 0) {
+                      setShows((current) => {
+                        const combined = [...current, ...results];
+                        const seen = new Set();
+                        return combined.filter((item) => {
+                          if (!item?.id) {
+                            return false;
+                          }
+                          const isTV =
+                            item.media_type === "tv" ||
+                            Boolean(item.first_air_date) ||
+                            Boolean(item.name);
+                          if (!isTV || seen.has(item.id)) {
+                            return false;
+                          }
+                          seen.add(item.id);
+                          return true;
+                        });
+                      });
+                    }
+                  } catch {
+                    setError("STREAM could not load more TV shows right now.");
+                  } finally {
+                    setLoadingMore(false);
                   }
-                  disabled={
-                    loadingMore
-                  }
+                }}
+                disabled={
+                  loadingMore
+                }
                   className="
                     min-w-[180px]
                     rounded-full
@@ -555,7 +519,6 @@ export default function TVShows() {
                     ? "Loading shows..."
                     : "Load more shows"}
                 </button>
-              )}
             </div>
           </>
         ) : (

@@ -4,6 +4,7 @@ import {
   useNavigate,
   useSearchParams,
 } from "react-router-dom";
+import { paymentsApiUrl } from "../services/api";
 
 const planDetails = {
   basic: {
@@ -102,7 +103,7 @@ export default function Payment() {
       }
 
       const response = await fetch(
-        "http://localhost:8081/api/payments/initialize",
+        paymentsApiUrl("/initialize"),
         {
           method: "POST",
 

@@ -1,4 +1,4 @@
-const API_BASE = "http://localhost:8081/api/profiles";
+import { profilesApiUrl } from "./api";
 
 const getUserId = () => localStorage.getItem("token");
 
@@ -77,7 +77,7 @@ export const getContinueWatching = async () => {
   const { profileId } = requireContext();
 
   return request(
-    `${API_BASE}/${profileId}/continue-watching`
+    profilesApiUrl(`/${profileId}/continue-watching`)
   );
 };
 
@@ -87,7 +87,7 @@ export const saveContinueWatching = async (
   const { profileId } = requireContext();
 
   return request(
-    `${API_BASE}/${profileId}/continue-watching`,
+    profilesApiUrl(`/${profileId}/continue-watching`),
     {
       method: "PUT",
       body: JSON.stringify(item),
@@ -102,9 +102,9 @@ export const removeFromContinueWatching = async (
   const { profileId } = requireContext();
 
   return request(
-    `${API_BASE}/${profileId}/continue-watching/${encodeURIComponent(
+    profilesApiUrl(`/${profileId}/continue-watching/${encodeURIComponent(
       mediaType
-    )}/${encodeURIComponent(contentId)}`,
+    )}/${encodeURIComponent(contentId)}`),
     {
       method: "DELETE",
     }

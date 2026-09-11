@@ -14,7 +14,9 @@ import {
 import {
   getBackdropUrl,
   getMediaDetails,
+  getMovieVideos,
   getPosterUrl,
+  getTvEpisode,
 } from "../services/tmdbService";
 
 import {
@@ -26,9 +28,6 @@ import {
   getContinueWatching,
   saveContinueWatching as saveContinueWatchingToBackend,
 } from "../services/continueWatchingService";
-
-const GATEWAY_URL =
-  import.meta.env.VITE_API_GATEWAY_URL || "http://localhost:8084";
 
 const VIDSRC_BASE = "https://vidsrcme.ru";
 
@@ -92,8 +91,7 @@ export default function Player() {
       );
 
       localStorage.setItem(continueWatchingKey, JSON.stringify(remaining));
-    } catch (err) {
-      console.error("Continue Watching local remove error:", err);
+    } catch {
     }
   };
 
@@ -142,8 +140,7 @@ export default function Player() {
         continueWatchingKey,
         JSON.stringify([item, ...withoutCurrent].slice(0, 20))
       );
-    } catch (err) {
-      console.error("Continue Watching local cache error:", err);
+    } catch {
     }
   };
 
@@ -252,15 +249,7 @@ export default function Player() {
 
         if (isMovie) {
           try {
-            const response = await fetch(
-              `${GATEWAY_URL}/api/movies/${id}/videos`
-            );
-
-            if (!response.ok) {
-              throw new Error(`Playback service returned ${response.status}`);
-            }
-
-            const playback = await response.json();
+            const playback = await getMovieVideos(id);
 
             if (!cancelled && playback?.embedUrl) {
               setEmbedUrl(playback.embedUrl);
@@ -274,15 +263,11 @@ export default function Player() {
           }
         } else if (isTV) {
           try {
-            const response = await fetch(
-              `${GATEWAY_URL}/api/movies/tv/${id}/season/${seasonNumber}/episode/${episodeNumber}`
+            const episode = await getTvEpisode(
+              id,
+              seasonNumber,
+              episodeNumber
             );
-
-            if (!response.ok) {
-              throw new Error(`Episode service returned ${response.status}`);
-            }
-
-            const episode = await response.json();
 
             if (cancelled) return;
 

@@ -10,8 +10,7 @@ import {
   CHARACTER_AVATARS,
   getProfileAvatar,
 } from "../data/profileAvatars";
-
-const PROFILE_API = "http://localhost:8081/api/profiles";
+import { profilesApiUrl } from "../services/api";
 
 /* =========================================
    AVATAR COMPONENT
@@ -110,7 +109,7 @@ export default function WhosWatching() {
       try {
         setProfilesLoading(true);
 
-        const response = await fetch(PROFILE_API, {
+        const response = await fetch(profilesApiUrl(), {
           headers: {
             "X-User-Id": userId,
           },
@@ -166,7 +165,7 @@ export default function WhosWatching() {
           .map((movie) => ({
             id: movie.id,
             image: getBackdropUrl(
-              movie.backdrop_path,
+              movie.backdropUrl || movie.backdrop_path,
             ),
           }));
 
@@ -244,7 +243,7 @@ export default function WhosWatching() {
       setSavingProfile(true);
       setError("");
 
-      const response = await fetch(PROFILE_API, {
+      const response = await fetch(profilesApiUrl(), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

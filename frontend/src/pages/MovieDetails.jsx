@@ -13,9 +13,7 @@ import {
   getMyList,
   removeFromMyList,
 } from "../services/myListService";
-
-const GATEWAY_URL =
-  import.meta.env.VITE_API_GATEWAY_URL || "http://localhost:8084";
+import { getTvSeason } from "../services/tmdbService";
 
 const typeOf = (item) => {
   if (item?.mediaType === "playable") return "playable";
@@ -87,8 +85,7 @@ export default function MovieDetails() {
             setSelectedSeason(Number(firstRegularSeason.season_number));
           }
         }
-      } catch (error) {
-        console.error("Movie details error:", error);
+      } catch {
       } finally {
         setLoading(false);
       }
@@ -107,22 +104,12 @@ export default function MovieDetails() {
         setEpisodesLoading(true);
         setEpisodesError("");
 
-        const response = await fetch(
-          `${GATEWAY_URL}/api/movies/tv/${id}/season/${selectedSeason}`
-        );
-
-        if (!response.ok) {
-          throw new Error(`Season service returned ${response.status}`);
-        }
-
-        const seasonData = await response.json();
+        const seasonData = await getTvSeason(id, selectedSeason);
 
         if (!cancelled) {
           setEpisodes(Array.isArray(seasonData?.episodes) ? seasonData.episodes : []);
         }
-      } catch (error) {
-        console.error("Season episodes error:", error);
-
+      } catch {
         if (!cancelled) {
           setEpisodes([]);
           setEpisodesError("STREAM could not load this season right now.");
@@ -183,9 +170,7 @@ export default function MovieDetails() {
         );
 
         setInMyList(exists);
-      } catch (error) {
-        console.error("Failed to check backend My List:", error);
-
+      } catch {
         try {
           const saved = JSON.parse(localStorage.getItem(myListKey)) || [];
 

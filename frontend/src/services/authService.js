@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://localhost:8081/api/auth";
+import { authApiUrl } from "./api";
 
 async function parseResponse(response) {
   const contentType = response.headers.get("content-type") || "";
@@ -20,7 +20,7 @@ async function parseResponse(response) {
 }
 
 export async function registerUser(data) {
-  const response = await fetch(`${API_BASE_URL}/register`, {
+  const response = await fetch(authApiUrl("/register"), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -41,7 +41,7 @@ export async function registerUser(data) {
 }
 
 export async function loginUser(identifier, password) {
-  const response = await fetch(`${API_BASE_URL}/login`, {
+  const response = await fetch(authApiUrl("/login"), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -66,7 +66,7 @@ export async function loginUser(identifier, password) {
 
 export async function sendVerificationEmail(email, name) {
   const response = await fetch(
-    `${API_BASE_URL}/send-verification`,
+    authApiUrl("/send-verification"),
     {
       method: "POST",
       headers: {
@@ -93,7 +93,7 @@ export async function sendVerificationEmail(email, name) {
 
 export async function setPassword(token, password) {
   const response = await fetch(
-    `${API_BASE_URL}/set-password`,
+    authApiUrl("/set-password"),
     {
       method: "POST",
       headers: {
@@ -128,7 +128,7 @@ export async function selectPlan(plan) {
   }
 
   const response = await fetch(
-    `${API_BASE_URL}/select-plan`,
+    authApiUrl("/select-plan"),
     {
       method: "POST",
       headers: {

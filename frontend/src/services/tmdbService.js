@@ -1,112 +1,50 @@
-const BASE_URL = "https://api.themoviedb.org/3";
+import { moviesApiUrl } from "./api";
 
-const GATEWAY_URL =
-  import.meta.env.VITE_API_GATEWAY_URL || "http://localhost:8084";
-
-const options = {
-  headers: {
-    Authorization: `Bearer ${import.meta.env.VITE_TMDB_TOKEN}`,
-    accept: "application/json",
-  },
-};
-
-const normalizeGatewayMovie = (movie) => ({
-  ...movie,
-
-  poster_path:
-    movie.poster_path ||
-    movie.posterUrl ||
-    null,
-
-  backdrop_path:
-    movie.backdrop_path ||
-    movie.backdropUrl ||
-    null,
-
-  media_type:
-    movie.media_type ||
-    movie.mediaType ||
-    "movie",
-
-  posterUrl:
-    movie.posterUrl ||
-    movie.poster_path ||
-    null,
-
-  backdropUrl:
-    movie.backdropUrl ||
-    movie.backdrop_path ||
-    null,
-
-  mediaType:
-    movie.mediaType ||
-    movie.media_type ||
-    "movie",
-});
-
-/* =========================================================
-   TRENDING THROUGH API GATEWAY
-   ========================================================= */
-
-export const getTrendingMovies = async () => {
-  const response = await fetch(
-    `${GATEWAY_URL}/api/movies/trending`
-  );
-
-  if (!response.ok) {
-    throw new Error(
-      `Failed to fetch trending movies through API Gateway: ${response.status}`
-    );
+const normalizeGatewayMovie = (movie) => {
+  if (!movie || typeof movie !== "object") {
+    return null;
   }
 
-  const movies = await response.json();
+  return {
+    ...movie,
+    poster_path: movie.poster_path || movie.posterUrl || null,
+    backdrop_path: movie.backdrop_path || movie.backdropUrl || null,
+    media_type: movie.media_type || movie.mediaType || "movie",
+    posterUrl: movie.posterUrl || movie.poster_path || null,
+    backdropUrl: movie.backdropUrl || movie.backdrop_path || null,
+    mediaType: movie.mediaType || movie.media_type || "movie",
+  };
+};
 
-  if (!Array.isArray(movies)) {
+const normalizeMovies = (data) => {
+  if (!Array.isArray(data)) {
     return [];
   }
 
-  return movies.map(normalizeGatewayMovie);
+  return data.map(normalizeGatewayMovie).filter(Boolean);
 };
 
-/* =========================================================
-   MOVIE DETAILS
-   ========================================================= */
-
-export const getMovieDetails = async (movieId) => {
-  const response = await fetch(
-    `${BASE_URL}/movie/${movieId}?language=en-US&append_to_response=credits,videos`,
-    options
-  );
+const gatewayGet = async (path) => {
+  const response = await fetch(moviesApiUrl(path));
 
   if (!response.ok) {
-    throw new Error("Failed to fetch movie details");
+    let message = `STREAM API request failed: ${response.status}`;
+
+    try {
+      const errorData = await response.json();
+
+      if (errorData?.message) {
+        message = `STREAM API request failed: ${errorData.message}`;
+      }
+    } catch {
+      // Ignore invalid/non-JSON error responses.
+    }
+
+    throw new Error(message);
   }
 
   return response.json();
 };
-
-/* =========================================================
-   MOVIE RECOMMENDATIONS
-   ========================================================= */
-
-export const getMovieRecommendations = async (movieId) => {
-  const response = await fetch(
-    `${BASE_URL}/movie/${movieId}/recommendations?language=en-US&page=1`,
-    options
-  );
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch recommendations");
-  }
-
-  const data = await response.json();
-
-  return data.results || [];
-};
-
-/* =========================================================
-   IMAGE HELPERS
-   ========================================================= */
 
 export const getPosterUrl = (posterPath) => {
   if (!posterPath) {
@@ -120,7 +58,11 @@ export const getPosterUrl = (posterPath) => {
     return posterPath;
   }
 
-  return `https://image.tmdb.org/t/p/w500${posterPath}`;
+  const cleanPath = posterPath.startsWith("/")
+    ? posterPath
+    : `/${posterPath}`;
+
+  return `https://image.tmdb.org/t/p/w500${cleanPath}`;
 };
 
 export const getBackdropUrl = (backdropPath) => {
@@ -135,356 +77,200 @@ export const getBackdropUrl = (backdropPath) => {
     return backdropPath;
   }
 
-  return `https://image.tmdb.org/t/p/original${backdropPath}`;
+  const cleanPath = backdropPath.startsWith("/")
+    ? backdropPath
+    : `/${backdropPath}`;
+
+  return `https://image.tmdb.org/t/p/original${cleanPath}`;
 };
 
-/* =========================================================
-   GENERIC TMDB FETCH
-   ========================================================= */
+export const getTrendingMovies = async () => {
+  const data = await gatewayGet("/trending");
+  return normalizeMovies(data);
+};
 
-const fetchResults = async (path) => {
-  const response = await fetch(
-    `${BASE_URL}${path}`,
-    options
-  );
+export const getPopularMovies = async () => {
+  const data = await gatewayGet("/popular");
+  return normalizeMovies(data);
+};
 
-  if (!response.ok) {
-    throw new Error(
-      `TMDB request failed: ${path}`
-    );
+export const getPopularTv = async () => {
+  const data = await gatewayGet("/tv/popular");
+  return normalizeMovies(data);
+};
+
+export const getMovieDetails = async (movieId) => {
+  if (!movieId) {
+    throw new Error("Movie ID is required.");
   }
 
-  const data = await response.json();
-
-  return data.results || [];
-};
-
-/* =========================================================
-   REMOVE DUPLICATES
-   ========================================================= */
-
-const dedupeByMediaAndId = (items) => {
-  const seen = new Set();
-
-  return items.filter((item) => {
-    if (!item?.id) {
-      return false;
-    }
-
-    const mediaType =
-      item.media_type ||
-      (item.first_air_date || item.name
-        ? "tv"
-        : "movie");
-
-    const key = `${mediaType}:${item.id}`;
-
-    if (seen.has(key)) {
-      return false;
-    }
-
-    seen.add(key);
-
-    return true;
-  });
-};
-
-/* =========================================================
-   MULTIPLE TMDB PAGES
-
-   TMDB normally returns 20 titles per page.
-
-   3 pages = up to 60 titles
-   5 pages = up to 100 titles
-   ========================================================= */
-
-const fetchMultiplePages = async (
-  basePath,
-  pages = 3
-) => {
-  const requests = Array.from(
-    { length: pages },
-    (_, index) => {
-      const page = index + 1;
-
-      const separator =
-        basePath.includes("?")
-          ? "&"
-          : "?";
-
-      return fetchResults(
-        `${basePath}${separator}page=${page}`
-      );
-    }
-  );
-
-  const settled =
-    await Promise.allSettled(requests);
-
-  const combined = settled.flatMap(
-    (result) =>
-      result.status === "fulfilled"
-        ? result.value
-        : []
-  );
-
-  return dedupeByMediaAndId(combined);
-};
-
-/* =========================================================
-   MEDIA TYPE HELPER
-   ========================================================= */
-
-const withMediaType = (
-  items,
-  mediaType
-) =>
-  items.map((item) => ({
-    ...item,
-
-    media_type:
-      item.media_type ||
-      mediaType,
-  }));
-
-/* =========================================================
-   BROWSE CONTENT
-
-   We now fetch MULTIPLE pages instead of only page 1.
-   ========================================================= */
-
-export const getBrowseContent = async () => {
-  const requests = [
-    {
-      key: "trending",
-      path:
-        "/trending/all/week?language=en-US",
-      mediaType: null,
-      pages: 3,
-    },
-
-    {
-      key: "popular",
-      path:
-        "/movie/popular?language=en-US",
-      mediaType: "movie",
-      pages: 5,
-    },
-
-    {
-      key: "topRated",
-      path:
-        "/movie/top_rated?language=en-US",
-      mediaType: "movie",
-      pages: 3,
-    },
-
-    {
-      key: "movies",
-      path:
-        "/movie/now_playing?language=en-US",
-      mediaType: "movie",
-      pages: 3,
-    },
-
-    {
-      key: "tv",
-      path:
-        "/tv/popular?language=en-US",
-      mediaType: "tv",
-      pages: 5,
-    },
-
-    {
-      key: "topRatedTv",
-      path:
-        "/tv/top_rated?language=en-US",
-      mediaType: "tv",
-      pages: 3,
-    },
-
-    {
-      key: "airingToday",
-      path:
-        "/tv/airing_today?language=en-US",
-      mediaType: "tv",
-      pages: 3,
-    },
-
-    {
-      key: "action",
-      path:
-        "/discover/movie?language=en-US&sort_by=popularity.desc&with_genres=28",
-      mediaType: "movie",
-      pages: 3,
-    },
-
-    {
-      key: "comedy",
-      path:
-        "/discover/movie?language=en-US&sort_by=popularity.desc&with_genres=35",
-      mediaType: "movie",
-      pages: 3,
-    },
-
-    {
-      key: "drama",
-      path:
-        "/discover/movie?language=en-US&sort_by=popularity.desc&with_genres=18",
-      mediaType: "movie",
-      pages: 3,
-    },
-
-    {
-      key: "horror",
-      path:
-        "/discover/movie?language=en-US&sort_by=popularity.desc&with_genres=27",
-      mediaType: "movie",
-      pages: 3,
-    },
-
-    {
-      key: "romance",
-      path:
-        "/discover/movie?language=en-US&sort_by=popularity.desc&with_genres=10749",
-      mediaType: "movie",
-      pages: 3,
-    },
-
-    {
-      key: "scifi",
-      path:
-        "/discover/movie?language=en-US&sort_by=popularity.desc&with_genres=878",
-      mediaType: "movie",
-      pages: 3,
-    },
-
-    {
-      key: "animation",
-      path:
-        "/discover/movie?language=en-US&sort_by=popularity.desc&with_genres=16",
-      mediaType: "movie",
-      pages: 3,
-    },
-
-    {
-      key: "thriller",
-      path:
-        "/discover/movie?language=en-US&sort_by=popularity.desc&with_genres=53",
-      mediaType: "movie",
-      pages: 3,
-    },
-
-    {
-      key: "documentary",
-      path:
-        "/discover/movie?language=en-US&sort_by=popularity.desc&with_genres=99",
-      mediaType: "movie",
-      pages: 2,
-    },
-  ];
-
-  const settled =
-    await Promise.allSettled(
-      requests.map((request) =>
-        fetchMultiplePages(
-          request.path,
-          request.pages
-        )
-      )
-    );
-
-  return requests.reduce(
-    (
-      content,
-      request,
-      index
-    ) => {
-      if (
-        settled[index].status ===
-        "fulfilled"
-      ) {
-        const typed =
-          withMediaType(
-            settled[index].value,
-            request.mediaType
-          );
-
-        content[request.key] =
-          dedupeByMediaAndId(
-            typed
-          ).filter(
-            (item) =>
-              item.backdrop_path ||
-              item.poster_path
-          );
-      } else {
-        console.error(
-          `Failed to load ${request.key}:`,
-          settled[index].reason
-        );
-
-        content[request.key] = [];
-      }
-
-      return content;
-    },
-    {}
-  );
-};
-
-/* =========================================================
-   MOVIE / TV DETAILS
-   ========================================================= */
-
-export const getMediaDetails = async (
-  mediaType,
-  id
-) => {
-  const type =
-    mediaType === "tv"
-      ? "tv"
-      : "movie";
-
-  const response = await fetch(
-    `${BASE_URL}/${type}/${id}?language=en-US&append_to_response=credits,videos`,
-    options
-  );
-
-  if (!response.ok) {
-    throw new Error(
-      "Failed to fetch title details"
-    );
-  }
-
-  const data = await response.json();
+  const data = await gatewayGet(`/${movieId}`);
 
   return {
-    ...data,
-    media_type: type,
+    ...normalizeGatewayMovie(data),
+    media_type: "movie",
+    mediaType: "movie",
   };
 };
 
-/* =========================================================
-   MOVIE / TV RECOMMENDATIONS
-   ========================================================= */
+export const getMovieRecommendations = async (movieId) => {
+  if (!movieId) {
+    return [];
+  }
 
-export const getMediaRecommendations = async (
-  mediaType,
-  id
-) => {
-  const type =
-    mediaType === "tv"
-      ? "tv"
-      : "movie";
+  const data = await gatewayGet(`/${movieId}/recommendations`);
 
-  const results =
-    await fetchResults(
-      `/${type}/${id}/recommendations?language=en-US&page=1`
+  return normalizeMovies(data).map((movie) => ({
+    ...movie,
+    media_type: movie.media_type || "movie",
+    mediaType: movie.mediaType || "movie",
+  }));
+};
+
+export const getMediaDetails = async (mediaType, id) => {
+  if (!id) {
+    throw new Error("Media ID is required.");
+  }
+
+  const type = mediaType === "tv" ? "tv" : "movie";
+  const endpoint = type === "tv" ? `/tv/${id}` : `/${id}`;
+  const data = await gatewayGet(endpoint);
+
+  return {
+    ...normalizeGatewayMovie(data),
+    media_type: type,
+    mediaType: type,
+  };
+};
+
+export const getMediaRecommendations = async (mediaType, id) => {
+  if (!id) {
+    return [];
+  }
+
+  const type = mediaType === "tv" ? "tv" : "movie";
+
+  if (type === "movie") {
+    const data = await gatewayGet(`/${id}/recommendations`);
+    return normalizeMovies(data);
+  }
+
+  const tvDetails = await gatewayGet(`/tv/${id}`);
+  return normalizeMovies(tvDetails?.recommendations).map((item) => ({
+    ...item,
+    media_type: item.media_type || "tv",
+    mediaType: item.mediaType || "tv",
+  }));
+};
+
+export const getBrowseContent = async () => {
+  const data = await gatewayGet("/catalog");
+
+  if (!data || typeof data !== "object") {
+    return {};
+  }
+
+  const normalized = {};
+
+  Object.entries(data).forEach(([key, value]) => {
+    normalized[key] = Array.isArray(value)
+      ? normalizeMovies(value)
+      : value;
+  });
+
+  return normalized;
+};
+
+export const searchMovies = async (query, page = 1) => {
+  if (!query?.trim()) {
+    return [];
+  }
+
+  const params = new URLSearchParams({
+    q: query.trim(),
+    page: String(page),
+    type: "movie",
+  });
+
+  const data = await gatewayGet(`/search?${params.toString()}`);
+
+  if (data && Array.isArray(data.results)) {
+    return normalizeMovies(data.results);
+  }
+
+  return normalizeMovies(data);
+};
+
+export const searchTvShows = async (query, page = 1) => {
+  if (!query?.trim()) {
+    return [];
+  }
+
+  const params = new URLSearchParams({
+    q: query.trim(),
+    page: String(page),
+    type: "tv",
+  });
+
+  const data = await gatewayGet(`/search?${params.toString()}`);
+
+  if (data && Array.isArray(data.results)) {
+    return normalizeMovies(data.results).map((item) => ({
+      ...item,
+      media_type: "tv",
+      mediaType: "tv",
+    }));
+  }
+
+  return normalizeMovies(data).map((item) => ({
+    ...item,
+    media_type: "tv",
+    mediaType: "tv",
+  }));
+};
+
+export const searchAllMedia = async (query, page = 1) => {
+  if (!query?.trim()) {
+    return [];
+  }
+
+  const params = new URLSearchParams({
+    q: query.trim(),
+    page: String(page),
+    type: "all",
+  });
+
+  const data = await gatewayGet(`/search?${params.toString()}`);
+
+  if (data && Array.isArray(data.results)) {
+    return normalizeMovies(data.results);
+  }
+
+  return normalizeMovies(data);
+};
+
+export const getTvSeason = async (id, seasonNumber) => {
+  if (!id || !seasonNumber) {
+    throw new Error("TV season details require a title ID and season number.");
+  }
+
+  return gatewayGet(`/tv/${id}/season/${seasonNumber}`);
+};
+
+export const getTvEpisode = async (id, seasonNumber, episodeNumber) => {
+  if (!id || !seasonNumber || !episodeNumber) {
+    throw new Error(
+      "TV episode details require a title ID, season number, and episode number.",
     );
+  }
 
-  return withMediaType(
-    results,
-    type
-  );
+  return gatewayGet(`/tv/${id}/season/${seasonNumber}/episode/${episodeNumber}`);
+};
+
+export const getMovieVideos = async (id) => {
+  if (!id) {
+    throw new Error("Movie playback requires a title ID.");
+  }
+
+  return gatewayGet(`/${id}/videos`);
 };

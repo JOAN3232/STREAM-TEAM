@@ -1,4 +1,4 @@
-const API_BASE = "http://localhost:8081/api/profiles";
+import { profilesApiUrl } from "./api";
 
 const getUserId = () => localStorage.getItem("token");
 
@@ -69,29 +69,20 @@ export const getMyList = async () => {
   const { profileId } = requireContext();
 
   return request(
-    `${API_BASE}/${profileId}/my-list`
+    profilesApiUrl(`/${profileId}/my-list`)
   );
 };
 
 export const addToMyList = async (item) => {
-  const { userId, profileId } = requireContext();
+  const { profileId } = requireContext();
 
-  console.log("🟣 MY LIST TEST");
-  console.log("User ID:", userId);
-  console.log("Profile ID:", profileId);
-  console.log("Movie being saved:", item);
-
-  const result = await request(
-    `${API_BASE}/${profileId}/my-list`,
+  return request(
+    profilesApiUrl(`/${profileId}/my-list`),
     {
       method: "POST",
       body: JSON.stringify(item),
     }
   );
-
-  console.log("✅ Backend saved:", result);
-
-  return result;
 };
 
 export const removeFromMyList = async (
@@ -101,9 +92,9 @@ export const removeFromMyList = async (
   const { profileId } = requireContext();
 
   return request(
-    `${API_BASE}/${profileId}/my-list/${encodeURIComponent(
+    profilesApiUrl(`/${profileId}/my-list/${encodeURIComponent(
       mediaType
-    )}/${encodeURIComponent(contentId)}`,
+    )}/${encodeURIComponent(contentId)}`),
     {
       method: "DELETE",
     }
