@@ -15,8 +15,8 @@ import java.util.Map;
 @Service
 public class EmailService {
 
-    private final ObjectMapper objectMapper;
-    private final HttpClient httpClient;
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final HttpClient httpClient = HttpClient.newHttpClient();
 
     @Value("${BREVO_API_KEY:}")
     private String brevoApiKey;
@@ -26,11 +26,6 @@ public class EmailService {
 
     @Value("${BREVO_SENDER_NAME:STREAM}")
     private String senderName;
-
-    public EmailService(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
-        this.httpClient = HttpClient.newHttpClient();
-    }
 
     public void sendVerificationEmail(
             String recipientEmail,
