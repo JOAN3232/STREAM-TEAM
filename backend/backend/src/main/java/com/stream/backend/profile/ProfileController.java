@@ -9,7 +9,10 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/profiles")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = {
+    "http://localhost:5173",
+    "https://stream-team-seven.vercel.app"
+})
 public class ProfileController {
 
     private final ProfileService profileService;
