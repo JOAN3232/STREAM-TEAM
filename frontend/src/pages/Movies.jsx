@@ -18,6 +18,13 @@ const DISPLAY_FONT = {
     '"Cormorant Garamond", "Georgia", serif',
 };
 
+const TMDB_TOKEN = String(
+  import.meta.env.VITE_TMDB_TOKEN || ""
+)
+  .replace(/^Bearer\s+/i, "")
+  .replace(/[^A-Za-z0-9._-]/g, "")
+  .trim();
+
 const titleOf = (item) =>
   item?.title ||
   item?.name ||
@@ -88,9 +95,14 @@ export default function Movies() {
   const [movies, setMovies] =
     useState([]);
 
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [loadingMore, setLoadingMore] = useState(false);  
+  const [page, setPage] =
+    useState(1);
+
+  const [totalPages, setTotalPages] =
+    useState(1);
+
+  const [loadingMore, setLoadingMore] =
+    useState(false);
 
   const [loading, setLoading] =
     useState(true);
@@ -104,36 +116,48 @@ export default function Movies() {
   const [sort, setSort] =
     useState("popular");
 
-  const loadMovies = async (pageNumber = 1) => {
+  const loadMovies = async (
+    pageNumber = 1
+  ) => {
     try {
       if (pageNumber === 1) {
         setLoading(true);
       } else {
         setLoadingMore(true);
       }
-  
+
       setError("");
-  
+
+      if (!TMDB_TOKEN) {
+        throw new Error(
+          "TMDB token is missing"
+        );
+      }
+
       const response = await fetch(
         `https://api.themoviedb.org/3/discover/movie?include_adult=false&include_video=false&language=en-US&page=${pageNumber}&sort_by=popularity.desc`,
         {
+          method: "GET",
           headers: {
-           Authorization: `Bearer ${import.meta.env.VITE_TMDB_TOKEN?.replace(/\s+/g, "")}`,
-            accept: "application/json",
+            Authorization: `Bearer ${TMDB_TOKEN}`,
+            Accept: "application/json",
           },
         }
       );
-  
+
       if (!response.ok) {
         throw new Error(
           `TMDB request failed with status ${response.status}`
         );
       }
-  
-      const data = await response.json();
-  
-      setTotalPages(data.total_pages || 1);
-  
+
+      const data =
+        await response.json();
+
+      setTotalPages(
+        data.total_pages || 1
+      );
+
       setMovies((currentMovies) => {
         const combined =
           pageNumber === 1
@@ -142,31 +166,36 @@ export default function Movies() {
                 ...currentMovies,
                 ...(data.results || []),
               ];
-  
-        const seen = new Set();
-  
-        return combined.filter((movie) => {
-          if (!movie?.id) {
-            return false;
+
+        const seen =
+          new Set();
+
+        return combined.filter(
+          (movie) => {
+            if (!movie?.id) {
+              return false;
+            }
+
+            if (
+              seen.has(movie.id)
+            ) {
+              return false;
+            }
+
+            seen.add(movie.id);
+
+            return true;
           }
-  
-          if (seen.has(movie.id)) {
-            return false;
-          }
-  
-          seen.add(movie.id);
-  
-          return true;
-        });
+        );
       });
-  
+
       setPage(pageNumber);
     } catch (error) {
       console.error(
         "Failed to load movies:",
         error
       );
-  
+
       setError(
         "STREAM could not load movies right now."
       );
@@ -175,10 +204,10 @@ export default function Movies() {
       setLoadingMore(false);
     }
   };
-  
+
   useEffect(() => {
     loadMovies(1);
-  }, []);  
+  }, []);
 
   const displayedMovies =
     useMemo(() => {
@@ -191,10 +220,11 @@ export default function Movies() {
             .toLowerCase();
 
         result =
-          result.filter((movie) =>
-            titleOf(movie)
-              .toLowerCase()
-              .includes(search)
+          result.filter(
+            (movie) =>
+              titleOf(movie)
+                .toLowerCase()
+                .includes(search)
           );
       }
 
@@ -247,8 +277,6 @@ export default function Movies() {
 
   return (
     <StreamingLayout>
-      {/* PAGE TOP */}
-
       <section className="px-7 pb-7 pt-[104px] sm:px-9 lg:px-12 xl:px-14">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
@@ -275,8 +303,6 @@ export default function Movies() {
           </p>
         </div>
       </section>
-
-      {/* CONTROLS */}
 
       <section className="px-7 pb-8 sm:px-9 lg:px-12 xl:px-14">
         <div className="flex flex-col gap-3 rounded-2xl border border-white/[0.05] bg-white/[0.018] p-3 sm:flex-row sm:items-center">
@@ -325,25 +351,24 @@ export default function Movies() {
         </div>
       </section>
 
-      {/* ERROR */}
-
       {error && (
         <div className="mx-7 mb-6 rounded-xl border border-red-400/20 bg-red-400/[0.05] p-3 text-[10px] text-red-200/70 sm:mx-9 lg:mx-12 xl:mx-14">
           {error}
         </div>
       )}
 
-      {/* MOVIE GRID */}
-
       <section className="px-7 pb-28 sm:px-9 lg:px-12 xl:px-14">
         {displayedMovies.length ? (
           <>
             <div className="grid grid-cols-2 gap-x-5 gap-y-8 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
               {displayedMovies.map((movie) => {
-                const match = Math.round(
-                  (movie.vote_average || 0) * 10
-                );
-      
+                const match =
+                  Math.round(
+                    (movie.vote_average ||
+                      0) *
+                      10
+                  );
+
                 return (
                   <article
                     key={movie.id}
@@ -454,20 +479,25 @@ export default function Movies() {
                 );
               })}
             </div>
-      
-            {/* PAGINATION */}
+
             <div className="mt-16 flex flex-col items-center justify-center">
               <p className="mb-4 text-[9px] uppercase tracking-[0.2em] text-white/25">
-                Page {page} of {totalPages}
+                Page {page} of{" "}
+                {totalPages}
               </p>
-      
-              {page < totalPages && (
+
+              {page <
+                totalPages && (
                 <button
                   type="button"
                   onClick={() =>
-                    loadMovies(page + 1)
+                    loadMovies(
+                      page + 1
+                    )
                   }
-                  disabled={loadingMore}
+                  disabled={
+                    loadingMore
+                  }
                   className="
                     min-w-[180px]
                     rounded-full
@@ -499,19 +529,21 @@ export default function Movies() {
             <div className="text-center">
               <h2
                 className="text-[30px] font-semibold"
-                style={DISPLAY_FONT}
+                style={
+                  DISPLAY_FONT
+                }
               >
                 No movies found
               </h2>
-      
+
               <p className="mt-2 text-[10px] text-white/30">
-                Try another search.
+                Try another
+                search.
               </p>
             </div>
           </div>
         )}
       </section>
-      
     </StreamingLayout>
   );
 }
