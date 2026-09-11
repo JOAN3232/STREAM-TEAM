@@ -1,64 +1,60 @@
-  spring:
-    application:
-      name: api-gateway
 
-    cloud:
-      gateway:
-        globalcors:
-          add-to-simple-url-handler-mapping: true
+spring:
+  application:
+    name: api-gateway
 
-          cors-configurations:
-            '[/**]':
-              allowedOrigins:
-                - https://stream-team-seven.vercel.app
-                - http://localhost:5173
-                - http://localhost:4173
+  cloud:
+    gateway:
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
 
-              allowedMethods:
-                - GET
-                - POST
-                - PUT
-                - DELETE
-                - PATCH
-                - OPTIONS
+      globalcors:
+        add-to-simple-url-handler-mapping: true
+        cors-configurations:
+          '[/**]':
+            allowedOrigins:
+              - "https://stream-team-seven.vercel.app"
+              - "http://localhost:5173"
+              - "http://localhost:4173"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - PATCH
+              - OPTIONS
+            allowedHeaders:
+              - "*"
+            allowCredentials: true
+            maxAge: 3600
 
-              allowedHeaders:
-                - "*"
+      routes:
+        - id: movie-service
+          uri: ${MOVIE_SERVICE_URL:http://localhost:8082}
+          predicates:
+            - Path=/api/movies/**
 
-              exposedHeaders:
-                - "*"
+        - id: auth-service
+          uri: ${AUTH_SERVICE_URL:http://localhost:8081}
+          predicates:
+            - Path=/api/auth/**
 
-              allowCredentials: true
+        - id: user-service
+          uri: ${USER_SERVICE_URL:http://localhost:8081}
+          predicates:
+            - Path=/api/users/**
+            - Path=/api/watchlist/**
+            - Path=/api/history/**
+            - Path=/api/subscriptions/**
+            - Path=/api/payments/**
+            - Path=/api/profiles/**
 
-              maxAge: 3600
+server:
+  port: ${SERVER_PORT:8080}
 
-        routes:
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
 
-          - id: movie-service
-            uri: ${MOVIE_SERVICE_URL:http://localhost:8082}
-            predicates:
-              - Path=/api/movies/**
-
-          - id: auth-service
-            uri: ${AUTH_SERVICE_URL:http://localhost:8081}
-            predicates:
-              - Path=/api/auth/**
-
-          - id: user-service
-            uri: ${USER_SERVICE_URL:http://localhost:8081}
-            predicates:
-              - Path=/api/users/**
-              - Path=/api/watchlist/**
-              - Path=/api/history/**
-              - Path=/api/subscriptions/**
-              - Path=/api/payments/**
-              - Path=/api/profiles/**
-
-  server:
-    port: ${SERVER_PORT:8080}
-
-  management:
-    endpoints:
-      web:
-        exposure:
-          include: health,info,gateway
