@@ -118,7 +118,7 @@ export default function Movies() {
         `https://api.themoviedb.org/3/discover/movie?include_adult=false&include_video=false&language=en-US&page=${pageNumber}&sort_by=popularity.desc`,
         {
           headers: {
-            Authorization: `Bearer ${import.meta.env.VITE_TMDB_TOKEN}`,
+           Authorization: `Bearer ${import.meta.env.VITE_TMDB_TOKEN?.replace(/\s+/g, "")}`,
             accept: "application/json",
           },
         }
