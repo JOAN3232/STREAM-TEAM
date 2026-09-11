@@ -29,17 +29,17 @@ spring:
 
       routes:
         - id: movie-service
-          uri: ${MOVIE_SERVICE_URL:http://localhost:8082}
+          uri: ${MOVIE_SERVICE_URL:https://stream-movie-service.onrender.com}
           predicates:
             - Path=/api/movies/**
 
         - id: auth-service
-          uri: ${AUTH_SERVICE_URL:http://localhost:8081}
+          uri: ${AUTH_SERVICE_URL:https://stream-backend-n4em.onrender.com}
           predicates:
             - Path=/api/auth/**
 
         - id: user-service
-          uri: ${USER_SERVICE_URL:http://localhost:8081}
+          uri: ${USER_SERVICE_URL:https://stream-backend-n4em.onrender.com}
           predicates:
             - Path=/api/users/**,/api/watchlist/**,/api/history/**,/api/subscriptions/**,/api/payments/**,/api/profiles/**
 
